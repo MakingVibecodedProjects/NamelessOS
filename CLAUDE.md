@@ -155,15 +155,30 @@ A module is only "complete" when ALL of these pass:
 
 ## Known Traps (learned the hard way)
 
+### Compiler / build
 - **`-mno-sse -mno-sse2 -mno-avx` is mandatory** — GCC emits `movaps` for struct copies without it; causes #GP before SSE context is saved
-- **QEMU disk layout** — `-cdrom` ISO takes primary master (0x1F0); ATA disk goes on secondary (0x170) via `index=1`; always probe both channels
-- **ATAPI detection order** — send IDENTIFY first, *then* check mid/hi bytes (0x14/0xEB); at reset time mid/hi=0 for everything
-- **`kprintf` has no padding** — `%02x` silently prints wrong; use plain `%x`
-- **`poll_drq` must skip BSY** — check `if (s & BSY) continue` before testing DRQ or it times out immediately
-- **`context_switch` is one-way** — it returns into the *new* process's stack; the caller's locals after `context_switch()` execute in the old process when it's next scheduled
-- **Idle process (pid 0) kstack = NULL** — scheduler must never call `kfree` on it
-- **`filter-branch` / history rewrite** — requires clean working tree; always commit or stash first
-- **No `Co-Authored-By` in commits** — single author `MakingVibecodedProjects` only
+- **`kprintf` has no width padding** — `%02x` silently prints wrong output; use plain `%x`
+- **Zero warnings is a hard rule** — `__attribute__((unused))` is acceptable for intentionally-unused static helpers (e.g. `tmpfs_create`); never suppress real warnings with casts
+- **`find src/ -name "*.asm"` is picked up automatically** — the Makefile glob catches all `.asm` under `src/`; no manual rule needed for new modules
+
+### QEMU / hardware
+- **QEMU disk layout** — `-cdrom` ISO takes primary master (0x1F0); ATA disk must go on secondary (0x170) via `index=1`; probe both channels in the driver
+- **ATAPI detection order** — send `IDENTIFY` first, *then* check mid/hi bytes (0x14/0xEB); at reset time mid/hi=0 for everything so the signature check is useless before IDENTIFY
+- **`poll_drq` must skip BSY** — `if (s & ATA_SR_BSY) continue` before testing DRQ; without it the loop times out immediately
+- **WSL2 clock skew** — `make` may think everything is up to date after a crash due to future timestamps on Windows; fix: `touch src/**/*.c` or `make clean && make iso`
+- **QEMU `-kernel` does not work** — Multiboot2 requires booting via GRUB ISO; `-kernel` bypasses the MB2 info struct setup
+
+### Scheduler / process
+- **`context_switch` is one-way per call** — execution resumes in the *new* process's stack frame; code after `context_switch()` in the old process only runs when that process is switched back in
+- **Idle process (pid 0) `kstack = NULL`** — it uses the original boot stack; scheduler must never `kfree` it or touch `kstack`
+- **`process_set_current()` must be called before `context_switch()`** — not after; the new thread sees itself as current from its very first instruction
+- **`rsp = stack_top - 8` for new threads** — leaves an 8-byte slot at the top; `context_switch` jumps to `rip` directly (no `call`/`ret`), so a fresh thread starts with RSP already pointing below the sentinel zero
+
+### Git / GitHub
+- **GitHub "authored and committed" duplication** — happens when the commit email doesn't match a verified address on the account; use the full noreply: `271907151+MakingVibecodedProjects@users.noreply.github.com`
+- **`filter-branch` requires a clean working tree** — always commit or stash before rewriting history
+- **No `Co-Authored-By` trailers** — single author only; strip them with `--msg-filter 'sed "/^Co-Authored-By:.*/d"'`
+- **`git reset --soft <hash>` + `git reset HEAD -- .`** — the two-step to unstage everything after a soft reset so you can recommit files individually
 
 ---
 
@@ -191,6 +206,13 @@ These files underpin everything — never modify without explicit discussion:
 - After each commit: `git log --oneline -5` to confirm
 - Remote: `https://github.com/MakingVibecodedProjects/NamelessOS`
 - Push after each session end: `git push origin master`
+- When rewriting history (`filter-branch`): requires clean working tree — commit or stash first
+- Force push after history rewrites: `git push --force origin master`
+- Correct git identity (must match exactly to avoid GitHub "authored and committed" duplication):
+  ```
+  git config user.name "MakingVibecodedProjects"
+  git config user.email "271907151+MakingVibecodedProjects@users.noreply.github.com"
+  ```
 
 ---
 
