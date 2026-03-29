@@ -15,6 +15,9 @@
 #define DESC_SZ32      (1ULL << 54)   /* D/B — 32-bit (must be 0 if L=1)   */
 #define DESC_GRAN      (1ULL << 55)   /* G  — 4KB granularity               */
 
+/* DPL field helpers */
+#define DESC_DPL3      (3ULL << 45)   /* DPL = 3 (user) */
+
 /* 64-bit flat code segment: P=1 S=1 E=1 RW=1 L=1 */
 #define DESC_KERNEL_CODE \
     (DESC_PRESENT | DESC_DPL0 | DESC_NON_SYS | DESC_EXEC | DESC_RW | DESC_LONG)
@@ -22,6 +25,14 @@
 /* 64-bit flat data segment: P=1 S=1 RW=1 (L/D/B ignored in 64-bit mode) */
 #define DESC_KERNEL_DATA \
     (DESC_PRESENT | DESC_DPL0 | DESC_NON_SYS | DESC_RW)
+
+/* 64-bit user data segment: DPL=3 */
+#define DESC_USER_DATA \
+    (DESC_PRESENT | DESC_DPL3 | DESC_NON_SYS | DESC_RW)
+
+/* 64-bit user code segment: DPL=3, L=1 */
+#define DESC_USER_CODE \
+    (DESC_PRESENT | DESC_DPL3 | DESC_NON_SYS | DESC_EXEC | DESC_RW | DESC_LONG)
 
 /* ── TSS descriptor builder ───────────────────────────────────────
  * A 64-bit TSS descriptor is 16 bytes (two consecutive GDT slots).
@@ -100,13 +111,20 @@ int gdt_init(void) {
     /* [2] 64-bit kernel data */
     gdt[GDT_DATA] = DESC_KERNEL_DATA;
 
-    /* [3..4] 64-bit TSS */
+    /* [3] 64-bit user data  DPL=3 */
+    gdt[GDT_USER_DATA] = DESC_USER_DATA;
+
+    /* [4] 64-bit user code  DPL=3 */
+    gdt[GDT_USER_CODE] = DESC_USER_CODE;
+
+    /* [5..6] 64-bit TSS */
     tss.iomap_base = (u16)sizeof(tss64_t);
     gdt_set_tss(&gdt[GDT_TSS_LO], &gdt[GDT_TSS_HI],
                 (u64)&tss, (u32)(sizeof(tss64_t) - 1));
 
     gdt_load();
-    klog(LOG_INFO, "[gdt] GDT loaded (%d entries)", GDT_ENTRY_COUNT);
+    klog(LOG_INFO, "[gdt] GDT loaded (%d entries, user segs at 0x%x/0x%x)",
+         GDT_ENTRY_COUNT, SEG_USER_DATA, SEG_USER_CODE);
     return 0;
 }
 

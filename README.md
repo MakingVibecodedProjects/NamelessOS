@@ -22,8 +22,8 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 4 | tmpfs (in-memory filesystem, mounted on /) | done |
 | 4 | devfs (/dev/null, /dev/zero) | done |
 | 5 | Process subsystem (TCB, kthread_create, idle pid=0) | done |
-| 5 | Preemptive round-robin scheduler | in progress |
-| 5 | SYSCALL/SYSRET dispatch table | pending |
+| 5 | Preemptive round-robin scheduler | done |
+| 5 | SYSCALL/SYSRET dispatch table | done |
 | 6 | Userspace (ELF loader, libc, init, shell) | pending |
 | 7 | TCP/IP stack (e1000, ARP, IPv4, TCP) | pending |
 | 8 | SMP, TTY, HTTP server | pending |
@@ -105,7 +105,8 @@ Expected serial output (COM1 → stdout):
 │   ├── tmpfs/          # In-memory filesystem
 │   ├── devfs/          # /dev virtual filesystem
 │   ├── process/        # Process control blocks
-│   └── scheduler/      # Round-robin preemptive scheduler
+│   ├── scheduler/      # Round-robin preemptive scheduler
+│   └── syscall/        # SYSCALL/SYSRET dispatch table
 ├── prompts/            # Per-session build logs (PROMPT_N.md)
 ├── docs/               # Setup and architecture docs
 ├── kernel.ld           # Linker script (higher-half kernel @ 0xFFFFFFFF80000000)

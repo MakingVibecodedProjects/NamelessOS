@@ -1,4 +1,4 @@
-[← 14](PROMPT_14.md) | [index](README.md) | **15** | 16 →
+[← 14](PROMPT_14.md) | [index](README.md) | **15** | [16 →](PROMPT_16.md)
 
 ---
 
@@ -36,8 +36,8 @@
 
 ## Next session
 
-PROMPT_16 — Syscall: SYSCALL/SYSRET dispatch table, read/write/open/close/exit/getpid/fork/execve/waitpid/mmap/munmap/brk.
+[PROMPT_16 →](PROMPT_16.md) — Syscall: SYSCALL/SYSRET dispatch table, read/write/open/close/exit/getpid/fork/execve/waitpid/mmap/munmap/brk.
 
 ---
 
-[← 14](PROMPT_14.md) | [index](README.md) | **15** | 16 →
+[← 14](PROMPT_14.md) | [index](README.md) | **15** | [16 →](PROMPT_16.md)

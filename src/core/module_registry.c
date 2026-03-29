@@ -16,6 +16,7 @@
 #include "../devfs/devfs.h"
 #include "../process/process.h"
 #include "../scheduler/scheduler.h"
+#include "../syscall/syscall.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
@@ -36,6 +37,7 @@ static kernel_module_t *modules[] = {
     &mod_devfs,
     &mod_process,
     &mod_scheduler,
+    &mod_syscall,
 };
 
 #define MODULE_COUNT ((int)(sizeof(modules) / sizeof(modules[0])))

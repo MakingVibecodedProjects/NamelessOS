@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 5 Step 2 — `src/scheduler/` (preemptive round-robin, `context_switch` asm, timer-driven tick)
-- **Next task:** Phase 5 Step 3 — `src/syscall/` (SYSCALL/SYSRET dispatch, read/write/open/close/exit/getpid/fork/execve/waitpid/mmap/munmap/brk)
+- **Last completed:** Phase 5 Step 3 — `src/syscall/` (SYSCALL/SYSRET dispatch, 12 syscalls, user GDT segments)
+- **Next task:** Phase 6 Step 1 — per-process page tables + COW fork (`src/vmm/` addition)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
@@ -172,6 +172,12 @@ A module is only "complete" when ALL of these pass:
 - **`poll_drq` must skip BSY** — `if (s & ATA_SR_BSY) continue` before testing DRQ; without it the loop times out immediately
 - **WSL2 clock skew** — `make` may think everything is up to date after a crash due to future timestamps on Windows; fix: `touch src/**/*.c` or `make clean && make iso`
 - **QEMU `-kernel` does not work** — Multiboot2 requires booting via GRUB ISO; `-kernel` bypasses the MB2 info struct setup
+
+### Syscall
+- **`o64 sysret` is mandatory in NASM** — without the `o64` prefix NASM emits the 32-bit SYSRET variant, which returns to 32-bit compatibility mode instead of 64-bit long mode; the CPU immediately triple-faults
+- **STAR[63:48] is `user_base`, not `user_CS`** — SYSRET64 sets CS = `STAR[63:48]+16 | 3` and SS = `STAR[63:48]+8 | 3`; so `STAR[63:48]` must be `user_data_selector - 8`, not the user code selector; layout must be `..., user_data, user_code, TSS` in the GDT for this arithmetic to work
+- **User GDT segments must sit before TSS** — adding DPL=3 descriptors shifts TSS from index 3 to index 5; `SEG_TSS` and all `ltr` / TSS references must be updated together
+- **rcx holds saved user RIP on SYSCALL entry — do not clobber before pushing** — the arg shuffle (rdi←rax, …, rcx←rdx) must be preceded by `push rcx` or the user return address is lost and SYSRET jumps to garbage
 
 ### Scheduler / process
 - **`context_switch` is one-way per call** — execution resumes in the *new* process's stack frame; code after `context_switch()` in the old process only runs when that process is switched back in
