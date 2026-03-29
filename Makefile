@@ -14,6 +14,7 @@ LDFLAGS := -T kernel.ld -nostdlib
 BUILD   := build
 TARGET  := $(BUILD)/namelessos.elf
 ISO     := $(BUILD)/namelessos.iso
+DISK    := $(BUILD)/disk.img
 
 # Collect all .c sources under src/
 C_SRCS   := $(shell find src -name '*.c')
@@ -28,7 +29,7 @@ SRC_ASM_OBJS  := $(patsubst src/%.asm, $(BUILD)/asm/%.o, $(SRC_ASM_SRCS))
 
 ALL_OBJS := $(BOOT_ASM_OBJS) $(SRC_ASM_OBJS) $(C_OBJS)
 
-.PHONY: all iso run debug clean
+.PHONY: all iso run debug disk clean
 
 all: $(TARGET)
 
@@ -63,10 +64,16 @@ $(ISO): $(TARGET)
 	grub-mkrescue -o $(ISO) $(BUILD)/iso 2>/dev/null
 	@echo "ISO: $(ISO)"
 
+# ── Create blank disk image ─────────────────────────────────────────
+disk:
+	dd if=/dev/zero of=$(DISK) bs=1M count=100
+
 # ── Run in QEMU (boots via ISO → GRUB → kernel) ────────────────────
 run: $(ISO)
+	@test -f $(DISK) || $(MAKE) disk
 	qemu-system-x86_64 \
-		-cdrom $(ISO) \
+		-drive file=$(DISK),format=raw,if=ide,index=0 \
+		-drive file=$(ISO),format=raw,media=cdrom,index=1 \
 		-m 512M \
 		-serial stdio \
 		-netdev user,id=net0 -device e1000,netdev=net0 \
@@ -75,8 +82,10 @@ run: $(ISO)
 
 # ── Debug: QEMU + GDB stub on :1234 ────────────────────────────────
 debug: $(ISO)
+	@test -f $(DISK) || $(MAKE) disk
 	qemu-system-x86_64 \
-		-cdrom $(ISO) \
+		-drive file=$(DISK),format=raw,if=ide,index=0 \
+		-drive file=$(ISO),format=raw,media=cdrom,index=1 \
 		-m 512M \
 		-serial stdio \
 		-netdev user,id=net0 -device e1000,netdev=net0 \
