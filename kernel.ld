@@ -24,6 +24,8 @@ SECTIONS {
     .boot ALIGN(4K) : {
         KEEP(*(.multiboot2))
         *(.text.boot)
+        *(.bss.mb2)
+        . = ALIGN(4K);
         *(.bss.pagetables)
     }
 
@@ -33,6 +35,7 @@ SECTIONS {
     . += KERNEL_VMA;
 
     .text ALIGN(4K) : AT(ADDR(.text) - KERNEL_VMA) {
+        __kernel_start = .;
         *(.text .text.*)
     }
 
@@ -47,6 +50,7 @@ SECTIONS {
     .bss ALIGN(4K) : AT(ADDR(.bss) - KERNEL_VMA) {
         *(COMMON)
         *(.bss .bss.*)
+        __kernel_end = .;
     }
 
     /DISCARD/ : {

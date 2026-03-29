@@ -52,6 +52,8 @@ extern kernel_main
 
 start:
     cli
+    ; Save Multiboot2 info pointer (ebx) BEFORE anything clobbers it
+    mov  [mb2_info_phys], ebx
     mov  esp, stack32_top           ; tiny 32-bit stack (in .bss.pagetables section)
 
     ; ── Zero the page table area ──────────────────────────────────
@@ -132,6 +134,9 @@ long_mode_entry:
     ; Switch to the higher-half kernel stack
     mov  rsp, stack_top
 
+    ; Pass Multiboot2 info pointer as first argument (rdi = physical address)
+    mov  edi, [mb2_info_phys]    ; zero-extends into rdi
+
     ; Absolute call into the higher half
     mov  rax, kernel_main
     call rax
@@ -160,8 +165,12 @@ gdt64_ptr:
 ; Page table buffers and early stack — LOW physical address required
 ; nobits tells NASM this is a BSS-style (uninitialized) section
 ; ─────────────────────────────────────────────────────────────────────
+; MB2 info pointer — small BSS variable, must be reachable in 32-bit mode
+section .bss.mb2 nobits alloc noexec write
+mb2_info_phys: resd 1
+
+; Page tables — 4K-aligned BSS
 section .bss.pagetables nobits alloc noexec write
-ALIGN 4096
 pml4:     resb 4096
 pdpt_id:  resb 4096
 pdpt_hh:  resb 4096
