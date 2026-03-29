@@ -16,14 +16,17 @@ TARGET  := $(BUILD)/namelessos.elf
 ISO     := $(BUILD)/namelessos.iso
 
 # Collect all .c sources under src/
-C_SRCS  := $(shell find src -name '*.c')
-C_OBJS  := $(patsubst src/%.c, $(BUILD)/%.o, $(C_SRCS))
+C_SRCS   := $(shell find src -name '*.c')
+C_OBJS   := $(patsubst src/%.c, $(BUILD)/%.o, $(C_SRCS))
 
-# Collect all .asm sources under boot/
-ASM_SRCS := $(shell find boot -name '*.asm')
-ASM_OBJS := $(patsubst boot/%.asm, $(BUILD)/boot/%.o, $(ASM_SRCS))
+# Collect .asm sources under boot/ and src/
+BOOT_ASM_SRCS := $(shell find boot -name '*.asm')
+BOOT_ASM_OBJS := $(patsubst boot/%.asm, $(BUILD)/boot/%.o, $(BOOT_ASM_SRCS))
 
-ALL_OBJS := $(ASM_OBJS) $(C_OBJS)
+SRC_ASM_SRCS  := $(shell find src -name '*.asm')
+SRC_ASM_OBJS  := $(patsubst src/%.asm, $(BUILD)/asm/%.o, $(SRC_ASM_SRCS))
+
+ALL_OBJS := $(BOOT_ASM_OBJS) $(SRC_ASM_OBJS) $(C_OBJS)
 
 .PHONY: all iso run debug clean
 
@@ -40,8 +43,13 @@ $(BUILD)/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Assemble .asm → .o
+# Assemble boot/*.asm → .o
 $(BUILD)/boot/%.o: boot/%.asm
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) $< -o $@
+
+# Assemble src/**/*.asm → build/asm/...o  (separate dir avoids .c/.asm name collisions)
+$(BUILD)/asm/%.o: src/%.asm
 	@mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) $< -o $@
 

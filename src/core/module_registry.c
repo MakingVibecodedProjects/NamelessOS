@@ -2,12 +2,14 @@
 #include "../serial/serial.h"
 #include "../vga/vga.h"
 #include "../gdt/gdt.h"
+#include "../idt/idt.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
     &mod_serial,
     &mod_vga,
     &mod_gdt,
+    &mod_idt,
 };
 
 #define MODULE_COUNT ((int)(sizeof(modules) / sizeof(modules[0])))
