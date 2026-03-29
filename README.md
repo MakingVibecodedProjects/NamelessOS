@@ -34,7 +34,7 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 7 | IPv4 (header, checksum, routing, dispatch) | done |
 | 7 | ICMP (echo req/reply) | done |
 | 7 | UDP (datagrams, port dispatch) | done |
-| 7 | TCP | pending |
+| 7 | TCP (state machine, sliding window, retransmit) | done |
 | 8 | SMP, TTY, HTTP server | pending |
 
 ## Roadmap

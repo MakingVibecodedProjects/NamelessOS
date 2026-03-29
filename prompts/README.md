@@ -36,6 +36,7 @@ links forward to the next.
 | [PROMPT_24](PROMPT_24.md) | IPv4 — header parser, checksum, routing, protocol dispatch | Phase 7 | done |
 | [PROMPT_25](PROMPT_25.md) | ICMP — echo request/reply (ping) | Phase 7 | done |
 | [PROMPT_26](PROMPT_26.md) | UDP — datagrams, port dispatch, checksum | Phase 7 | done |
+| [PROMPT_27](PROMPT_27.md) | TCP — state machine, sliding window, retransmit | Phase 7 | done |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 
