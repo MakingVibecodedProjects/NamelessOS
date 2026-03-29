@@ -31,6 +31,7 @@ links forward to the next.
 | [PROMPT_19](PROMPT_19.md) | Userspace libc — crt0, syscall wrappers, malloc, printf | Phase 6 | done |
 | [PROMPT_20](PROMPT_20.md) | init (PID 1) + shell (cd/ls/cat/exec) | Phase 6 | done |
 | [PROMPT_21](PROMPT_21.md) | e1000 NIC driver — PCI detect, DMA TX/RX rings, polled mode | Phase 7 | done |
+| [PROMPT_22](PROMPT_22.md) | Ethernet — frame parser/builder, ethertype dispatch | Phase 7 | done |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 

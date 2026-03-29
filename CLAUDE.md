@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 7 Step 1 — `src/net/e1000/` (Intel 82540EM NIC driver, PCI detect, DMA TX/RX rings 32×2 KB, polled mode, MAC 52:54:00:12:34:56 from RAL/RAH)
-- **Next task:** Phase 7 Step 2 — `src/net/ethernet/` (frame parser/builder, ethertype dispatch)
+- **Last completed:** Phase 7 Step 2 — `src/net/ethernet/` (frame parser/builder, `htons`/`ntohs` helpers, ethertype dispatch table, wired as e1000 RX callback)
+- **Next task:** Phase 7 Step 3 — `src/net/arp/` (ARP request/reply, ARP table)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
