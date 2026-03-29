@@ -56,6 +56,18 @@ The DHCP module was written and compiled cleanly but received no OFFER. The inve
 ```
 (zero warnings, zero errors; all previous module lines unchanged)
 
+## Phase 7 complete ✓
+
+1. ✅ e1000 NIC driver (PCI detect, DMA TX/RX rings, polled mode)
+2. ✅ Ethernet layer (frame parser/builder, ethertype dispatch)
+3. ✅ ARP (request/reply, 16-entry table)
+4. ✅ IPv4 (header, checksum, routing, broadcast)
+5. ✅ ICMP (echo request/reply)
+6. ✅ UDP (datagrams, port dispatch, native-byte-order checksum)
+7. ✅ TCP (state machine, sliding window, retransmit)
+8. ✅ Socket (BSD socket syscalls over TCP/UDP)
+9. ✅ DHCP client (obtains IP 10.0.2.15/24 gw 10.0.2.2 from QEMU SLIRP on boot)
+
 ## Next session
 
 30 → — Phase 8 Step 1: `src/smp/` — APIC SIPI, per-CPU data (gs-based), spinlocks

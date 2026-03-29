@@ -39,6 +39,7 @@ links forward to the next.
 | [PROMPT_27](PROMPT_27.md) | TCP — state machine, sliding window, retransmit | Phase 7 | done |
 | [PROMPT_28](PROMPT_28.md) | Socket — BSD socket syscalls over TCP/UDP | Phase 7 | done |
 | [PROMPT_29](PROMPT_29.md) | DHCP client — obtain IP on boot | Phase 7 | done |
+| PROMPT_30 | SMP — APIC SIPI, per-CPU data, spinlocks | Phase 8 | pending |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 
