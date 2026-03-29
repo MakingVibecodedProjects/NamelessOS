@@ -32,7 +32,8 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 7 | Ethernet layer (frame parser/builder, ethertype dispatch) | done |
 | 7 | ARP (request/reply, table) | done |
 | 7 | IPv4 (header, checksum, routing, dispatch) | done |
-| 7 | ICMP, UDP, TCP | pending |
+| 7 | ICMP (echo req/reply) | done |
+| 7 | UDP, TCP | pending |
 | 8 | SMP, TTY, HTTP server | pending |
 
 ## Roadmap
