@@ -116,6 +116,14 @@ make disk       # create disk.img FAT32 + userspace programs
 make clean
 ```
 
+**Windows:** all tools run under WSL2. Open the repo in a WSL terminal or prefix
+every make call with `wsl`:
+```powershell
+wsl make iso
+wsl make run
+```
+See `docs/setup-wsl.md` for first-time setup.
+
 ## Full QEMU Command
 ```bash
 qemu-system-x86_64 \
