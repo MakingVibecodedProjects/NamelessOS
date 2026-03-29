@@ -13,9 +13,9 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 8 Step 3 — `src/init_launch/` (embed init/shell ELF, load into new PML4, iretq to userspace PID 1, fork→execve→shell pipeline working, scheduler freeze on pid reuse fixed, e1000 MMIO accessible from user PML4 via pdpt_hh extension)
-- **Next task:** Phase 8 Step 4 — `src/dynlink/` (dynamic linker, shared `.so`, PLT/GOT)
-- **Known issues:** none
+- **Last completed:** Phase 8 complete — `src/dynlink/` (mmap/munmap syscalls, anonymous page mapping) + `userspace/programs/httpd/` (HTTP/1.0 server on port 80, socket/bind/listen/accept/send/recv wrappers in libc). Full roadmap finished.
+- **Next task:** none — roadmap complete. Possible extensions: real VMA tracker in process_t, persistent filesystem (ext2 on ATA), multi-core scheduler, actual PLT/GOT dynamic linking.
+- **Known issues:** none — all 37 roadmap items complete
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
 
@@ -209,6 +209,8 @@ A module is only "complete" when ALL of these pass:
 - **Bus-master must be enabled before DMA** — set bit 2 of PCI Command register via `pci_write32(pci, 0x04, cmd | (1 << 2))` before programming RDBAL/TDBAL; without it the NIC cannot DMA and all TX descriptors stay busy
 - **QEMU with `-smp N` and SeaBIOS boots APs from the full reset vector, not SIPI** — without ACPI MADT tables, SeaBIOS re-runs POST and GRUB for each AP; this makes the kernel boot N times and corrupts everything; `send_init_sipi` is correct but useless without MADT-based AP enumeration; must implement ACPI MADT parser before enabling AP boot
 - **UDP (and IP) checksum must use native u16 reads, not explicit big-endian byte access** — `buf[0]<<8 | buf[1]` produces a different one's-complement sum than `__builtin_memcpy(&w, buf, 2); sum += w` on little-endian x86; SLIRP's `cksum.c` uses native `*w++` reads, so any kernel code using big-endian byte access generates checksums that SLIRP silently rejects; burned an entire DHCP debugging session tracking this down
+- **Userspace `accept()` loop must yield — tight retry burns CPU and starves the TCP stack** — `accept()` returns -EAGAIN when no connection is ready; looping without a scheduler yield means the timer IRQ can't fire, the TCP state machine never runs, and the SYN-ACK is never sent; use a zero-length `read(stdin, &dummy, 0)` or any other yield-capable call in the retry path
+- **Userspace `<string.h>` must always be included explicitly** — `-nostdinc` disables all implicit header search; `strlen` in libc.a satisfies the linker but the compiler emits an implicit-declaration warning without the include; zero-warnings policy makes this a build error
 
 ### Git / GitHub
 - **`filter-branch` requires a clean working tree** — always commit or stash before rewriting history

@@ -29,6 +29,7 @@
 #include "../net/dhcp/dhcp.h"
 #include "../smp/smp.h"
 #include "../tty/tty.h"
+#include "../dynlink/dynlink.h"
 #include "../init_launch/init_launch.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
@@ -63,6 +64,7 @@ static kernel_module_t *modules[] = {
     &mod_socket,
     &mod_dhcp,
     &mod_smp,
+    &mod_dynlink,
     &mod_init_launch,
 };
 

@@ -109,11 +109,12 @@ debug: $(ISO)
 userspace:
 	$(MAKE) -C userspace/libc
 	$(MAKE) -C userspace/programs
-	$(MAKE) src/init_launch/init_elf.c src/init_launch/shell_elf.c
+	$(MAKE) src/init_launch/init_elf.c src/init_launch/shell_elf.c src/init_launch/httpd_elf.c
 
-# ── Embed init ELF as C byte array ─────────────────────────────────
+# ── Embed userspace ELFs as C byte arrays ──────────────────────────
 INIT_ELF  := $(BUILD)/userspace/programs/init
 SHELL_ELF := $(BUILD)/userspace/programs/shell
+HTTPD_ELF := $(BUILD)/userspace/programs/httpd
 
 src/init_launch/init_elf.c: $(INIT_ELF)
 	@echo "GEN: $@"
@@ -130,6 +131,14 @@ src/init_launch/shell_elf.c: $(SHELL_ELF)
 	@xxd -i < $< | sed 's/^  /    /' >> $@
 	@printf '};\n' >> $@
 	@printf 'const u32 shell_elf_size = sizeof(shell_elf_data);\n' >> $@
+
+src/init_launch/httpd_elf.c: $(HTTPD_ELF)
+	@echo "GEN: $@"
+	@printf '#include "../lib/types.h"\n' > $@
+	@printf 'const u8 httpd_elf_data[] = {\n' >> $@
+	@xxd -i < $< | sed 's/^  /    /' >> $@
+	@printf '};\n' >> $@
+	@printf 'const u32 httpd_elf_size = sizeof(httpd_elf_data);\n' >> $@
 
 # ── Clean ───────────────────────────────────────────────────────────
 clean:

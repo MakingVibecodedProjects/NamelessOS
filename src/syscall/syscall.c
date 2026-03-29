@@ -117,6 +117,8 @@ static u64 sys_fork(u64 a0 __attribute__((unused)),
 /* ── Embedded ELF table for execve ──────────────────────────────── */
 extern const u8  shell_elf_data[];
 extern const u32 shell_elf_size;
+extern const u8  httpd_elf_data[];
+extern const u32 httpd_elf_size;
 
 #define EXEC_USTACK_TOP    0x7FFFF000ULL
 #define EXEC_USTACK_PAGES  4
@@ -133,16 +135,22 @@ static u64 sys_execve(u64 path_ptr,
                       u64 a5 __attribute__((unused))) {
     const char *path = (const char *)(usize)path_ptr;
 
-    /* Find embedded ELF — only /bin/shell for now */
+    /* Find embedded ELF by path */
     const u8 *elf_data = NULL;
     u32       elf_size = 0;
     if (path) {
-        const char *want = "/bin/shell";
-        u32 i = 0;
-        while (path[i] && want[i] && path[i] == want[i]) i++;
-        if (!path[i] && !want[i]) {
+        const char *p = path, *q = "/bin/shell";
+        while (*p && *q && *p == *q) { p++; q++; }
+        if (!*p && !*q) {
             elf_data = shell_elf_data;
             elf_size = shell_elf_size;
+        } else {
+            p = path; q = "/bin/httpd";
+            while (*p && *q && *p == *q) { p++; q++; }
+            if (!*p && !*q) {
+                elf_data = httpd_elf_data;
+                elf_size = httpd_elf_size;
+            }
         }
     }
     if (!elf_data) return (u64)(i64)(-ENOENT);

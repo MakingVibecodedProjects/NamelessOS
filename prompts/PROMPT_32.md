@@ -1,4 +1,4 @@
-[← 31](PROMPT_31.md) | [index](README.md) | **32** | 33 →
+[← 31](PROMPT_31.md) | [index](README.md) | **32** | [33 →](PROMPT_33.md)
 
 ---
 
@@ -92,8 +92,8 @@
 
 ## Next session
 
-33 → — Phase 8 Step 4: dynamic linker (`src/dynlink/`) — shared `.so`, PLT/GOT
+[PROMPT_33 →](PROMPT_33.md) — Phase 8 Steps 4+5: dynlink mmap/munmap, httpd HTTP/1.0 server on port 80
 
 ---
 
-[← 31](PROMPT_31.md) | [index](README.md) | **32** | 33 →
+[← 31](PROMPT_31.md) | [index](README.md) | **32** | [33 →](PROMPT_33.md)

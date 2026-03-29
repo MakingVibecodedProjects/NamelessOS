@@ -40,7 +40,8 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 8 | SMP — LAPIC, per-CPU gs data, spinlocks, AP trampoline | done |
 | 8 | TTY — cooked mode line discipline, /dev/tty0 | done |
 | 8 | Init launch — embed init/shell ELF, iretq to PID 1, shell keyboard input | done |
-| 8 | Dynamic linker, HTTP server | pending |
+| 8 | dynlink — mmap/munmap anonymous page mapping | done |
+| 8 | httpd — HTTP/1.0 server on port 80, TCP socket layer | done |
 
 ## Roadmap
 

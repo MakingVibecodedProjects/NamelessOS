@@ -1,4 +1,4 @@
-# userspace/programs/Makefile — builds init and shell ELF64 binaries
+# userspace/programs/Makefile — builds init, shell, httpd ELF64 binaries
 
 CC      := x86_64-linux-gnu-gcc
 LD      := x86_64-linux-gnu-ld
@@ -19,13 +19,15 @@ BUILD   := ../../build/userspace/programs
 LDFLAGS := -nostdlib -static \
            -T userspace.ld
 
-.PHONY: all clean init shell
+.PHONY: all clean init shell httpd
 
-all: init shell
+all: init shell httpd
 
 init: $(BUILD)/init
 
 shell: $(BUILD)/shell
+
+httpd: $(BUILD)/httpd
 
 $(BUILD)/init: init/init.c $(LIBC) $(CRT0) userspace.ld
 	@mkdir -p $(BUILD)
@@ -37,6 +39,12 @@ $(BUILD)/shell: shell/shell.c $(LIBC) $(CRT0) userspace.ld
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c shell/shell.c -o $(BUILD)/shell.o
 	$(LD) $(LDFLAGS) -o $@ $(CRT0) $(BUILD)/shell.o $(LIBC)
+	@echo "LD: $@"
+
+$(BUILD)/httpd: httpd/httpd.c $(LIBC) $(CRT0) userspace.ld
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c httpd/httpd.c -o $(BUILD)/httpd.o
+	$(LD) $(LDFLAGS) -o $@ $(CRT0) $(BUILD)/httpd.o $(LIBC)
 	@echo "LD: $@"
 
 clean:
