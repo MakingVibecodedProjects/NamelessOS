@@ -144,12 +144,22 @@ qemu-system-x86_64 \
 
 ## Session End Protocol (EVERY session, automatically — never wait to be asked)
 When the session is wrapping up or a natural stopping point is reached, Claude
-automatically does BOTH of these without being prompted:
+automatically does ALL of these without being prompted:
 1. Read ALL existing `prompts/PROMPT_*.md` files for style reference, then write
    `prompts/PROMPT_N.md` — N is highest existing PROMPT number + 1.
    Match the exact style of prior prompts: header, what was built, key decisions,
    verified serial output, next session prompt section.
 2. Update "Current Status" in this CLAUDE.md with what was done and what's next
+3. **Git commit** — run `git status`, then `git add` all new/modified source files
+   and commit with message: `feat(phaseN): MODULE — one-line summary`
+   One commit per completed module or logical group. Never batch unrelated modules.
+
+## Git Commit Rules
+- Commit after EVERY completed module — do not accumulate uncommitted work
+- Format: `feat(phaseN): module — description` (e.g. `feat(phase3): timer — PIT 1000Hz IRQ0`)
+- Always run `git status` before committing to verify what will be staged
+- Never commit `build/`, `.claude/`, `.vscode/` — these are in .gitignore or untracked
+- After each commit, run `git log --oneline -5` to confirm
 
 ## Coding Style
 - Every public API function gets a one-line doc comment in the `.h`
