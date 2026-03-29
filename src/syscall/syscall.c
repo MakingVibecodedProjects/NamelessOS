@@ -180,7 +180,8 @@ static u64 sys_execve(u64 path_ptr,
     }
 
     /* Switch to new address space and free old */
-    p->pml4_phys = new_pml4;
+    p->pml4_phys  = new_pml4;
+    p->mmap_next  = 0;   /* reset per-process mmap cursor for new image */
     vmm_switch_to(new_pml4);
     if (old_pml4) vmm_destroy_user_pml4(old_pml4);
 

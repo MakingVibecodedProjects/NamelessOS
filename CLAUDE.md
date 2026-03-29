@@ -13,9 +13,9 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 8 complete — `src/dynlink/` (mmap/munmap syscalls, anonymous page mapping) + `userspace/programs/httpd/` (HTTP/1.0 server on port 80, socket/bind/listen/accept/send/recv wrappers in libc). Full roadmap finished.
-- **Next task:** none — roadmap complete. Possible extensions: real VMA tracker in process_t, persistent filesystem (ext2 on ATA), multi-core scheduler, actual PLT/GOT dynamic linking.
-- **Known issues:** none — all 37 roadmap items complete
+- **Last completed:** Phase 8 complete — dynlink/httpd race fix: `mmap_next` moved per-process into `process_t`, httpd launched from kernel (`init_launch`) not from userspace `init`, `init.c` shell-only respawn loop. All 37 roadmap items complete and stable.
+- **Next task:** none — roadmap complete. Possible extensions: real VMA tracker, ext2 on ATA, multi-core scheduler, actual PLT/GOT dynamic linking.
+- **Known issues:** none — clean boot, no crashes
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
 
@@ -198,6 +198,11 @@ A module is only "complete" when ALL of these pass:
 - **`rsp = stack_top - 8` for new threads** — leaves an 8-byte slot at the top; `context_switch` jumps to `rip` directly (no `call`/`ret`), so a fresh thread starts with RSP already pointing below the sentinel zero
 - **CR3 must switch AFTER RSP is on new kernel stack** — if `vmm_switch_to` is called from scheduler.c while still on the old process's stack, and the old stack is the boot stack (identity-mapped via PML4[0]) but the new PML4 has no PML4[0], the next instruction after `mov cr3` faults; move CR3 write into context_switch.asm, after `mov rsp, [rsi+48]`
 - **`scheduler_remove` must be called before marking a slot UNUSED** — `process_waitpid` sets `child->state = PROC_UNUSED` but if the node is still in the circular run queue, the next `alloc_pid` reuses the slot and `scheduler_add` inserts it again; the old `next` pointer creates a malformed list that deadlocks the scheduler on every second fork of the same pid
+
+- **`mmap_next` must be per-process, not a global** — a global bump pointer in `dynlink.c` looks fine until two processes call `mmap` concurrently (e.g., httpd and shell both running); they increment the same pointer and their mappings collide in the same virtual range of each other's (different) address spaces; move `mmap_next` into `process_t` and lazily initialise it to `MMAP_BASE` on first use
+- **`execve` must reset `mmap_next = 0` when replacing an address space** — the virtual address layout is brand new; the cursor from the old image would skip the bottom of the anonymous window and eventually overflow into unmapped memory; zero it so the first `mmap` re-initialises to `MMAP_BASE`
+- **Launch independent daemons from the kernel, not from userspace `init`** — if `init` forks two children then both call `execve` simultaneously, they share a COW clone of the same PML4; concurrent `vmm_fork_pml4` + `vmm_destroy_user_pml4` from two threads corrupts page-table reference counts; instead launch each daemon via `launch_user_process()` in `init_launch.c` which gives each process a clean, independently allocated PML4 from day zero
+- **Stale object files hide struct layout changes** — adding a field to `process_t` doesn't trigger a rebuild of every `.c` file that includes `process.h` when `make` timestamps are skewed (WSL2 clock skew); the scheduler's `mov 0x98(%rbx),%rbx` accessed the wrong offset for `->next` causing a NULL deref page fault; run `make clean && make iso` after any struct change
 
 ### PMM / heap
 - **PMM must mark `0x100000 → __kernel_end_phys` used, not just `__kernel_start_phys`** — the `.boot` section (entry code + page tables) lives at physical 0x100000, below `__kernel_start`; if PMM omits it, the slab allocator eventually recycles those frames and `memset(slab, 0, 4096)` zeros the PML4, causing a triple fault; mark from the hard-coded physical base 0x100000

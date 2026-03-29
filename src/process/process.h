@@ -19,6 +19,7 @@ typedef struct process {
     u64           user_rip;    /* user RIP saved on SYSCALL entry (rcx) */
     u64           user_rsp;    /* user RSP saved on SYSCALL entry */
     u64           user_rflags; /* user RFLAGS saved on SYSCALL entry (r11) */
+    u64           mmap_next;   /* per-process anonymous mmap bump pointer */
     struct process *next;      /* intrusive linked list for scheduler */
 } process_t;
 

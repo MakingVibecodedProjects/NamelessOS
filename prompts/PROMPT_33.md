@@ -1,4 +1,4 @@
-[← 32](PROMPT_32.md) | [index](README.md) | **33** |
+[← 32](PROMPT_32.md) | [index](README.md) | **33** | [34 →](PROMPT_34.md)
 
 ---
 
@@ -86,4 +86,4 @@
 
 ---
 
-[← 32](PROMPT_32.md) | [index](README.md) | **33** |
+[← 32](PROMPT_32.md) | [index](README.md) | **33** | [34 →](PROMPT_34.md)

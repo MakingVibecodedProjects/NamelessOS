@@ -9,11 +9,8 @@
 #include "../process/process.h"
 #include "../syscall/syscall.h"
 
-/* ── Per-process mmap bump pointer ──────────────────────────────────
-   We track one mmap cursor per process.  Since we only have one user
-   process at a time in practice, a single static is sufficient.
-   A real kernel would store this in the process_t struct.            */
-static u64 mmap_next = MMAP_BASE;
+/* mmap_next is stored per-process in process_t::mmap_next.
+   Initialised to MMAP_BASE by init_launch and reset by execve. */
 
 /* ── sys_mmap(addr, length, prot, flags, fd, offset) → va or -ENOMEM
    Only MAP_ANONYMOUS|MAP_PRIVATE is supported (fd=-1, offset=0).
@@ -32,15 +29,19 @@ static u64 sys_mmap(u64 addr __attribute__((unused)),
     /* Round up to page boundary */
     u64 pages = (length + PAGE_SIZE - 1) / PAGE_SIZE;
 
-    /* Check we haven't exhausted the anonymous mapping window */
-    if (mmap_next + pages * PAGE_SIZE > MMAP_LIMIT)
-        return MAP_FAILED;
-
     process_t *p = process_current();
     if (!p || !p->pml4_phys)
         return MAP_FAILED;
 
-    u64 va = mmap_next;
+    /* Initialise cursor on first use */
+    if (p->mmap_next == 0)
+        p->mmap_next = MMAP_BASE;
+
+    /* Check window */
+    if (p->mmap_next + pages * PAGE_SIZE > MMAP_LIMIT)
+        return MAP_FAILED;
+
+    u64 va = p->mmap_next;
 
     for (u64 i = 0; i < pages; i++) {
         u64 frame = pmm_alloc_frame();
@@ -54,7 +55,7 @@ static u64 sys_mmap(u64 addr __attribute__((unused)),
         }
     }
 
-    mmap_next += pages * PAGE_SIZE;
+    p->mmap_next += pages * PAGE_SIZE;
     return va;
 }
 
@@ -71,7 +72,6 @@ static u64 sys_munmap(u64 addr    __attribute__((unused)),
 
 /* ── Module init / dump ─────────────────────────────────────────── */
 static int dynlink_init(void) {
-    mmap_next = MMAP_BASE;
     syscall_register(9,  sys_mmap);    /* SYS_MMAP   = 9  */
     syscall_register(11, sys_munmap);  /* SYS_MUNMAP = 11 */
     klog(LOG_INFO, "[dynlink] mmap/munmap ready (anon window 0x%x-0x%x)",
@@ -80,7 +80,9 @@ static int dynlink_init(void) {
 }
 
 static void dynlink_dump(void) {
-    klog(LOG_DEBUG, "[dynlink] mmap cursor=0x%x", (unsigned)mmap_next);
+    process_t *p = process_current();
+    klog(LOG_DEBUG, "[dynlink] mmap cursor=0x%x",
+         (unsigned)(p ? p->mmap_next : 0));
 }
 
 kernel_module_t mod_dynlink = {
