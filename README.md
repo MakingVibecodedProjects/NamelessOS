@@ -35,6 +35,8 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 7 | ICMP (echo req/reply) | done |
 | 7 | UDP (datagrams, port dispatch) | done |
 | 7 | TCP (state machine, sliding window, retransmit) | done |
+| 7 | Socket (BSD socket syscalls over TCP/UDP) | done |
+| 7 | DHCP client | pending |
 | 8 | SMP, TTY, HTTP server | pending |
 
 ## Roadmap
