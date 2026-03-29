@@ -127,7 +127,8 @@ Module registration order in `src/core/module_registry.c` must match this graph.
 3. Update **Current Status** in this file (`CLAUDE.md`)
 4. Update `README.md` — "What's built so far" table: mark completed modules as done, update in-progress row
 5. Update `docs/architecture.md` if new modules, layers, or rules were added
-6. Git commit — one commit per completed module:
+6. Append any new bugs, surprises, or non-obvious behaviours discovered this session to the **Known Traps** section — one bullet per item, under the relevant category. If it burned time or would have been non-obvious to a fresh Claude, it belongs here.
+7. Git commit — one commit per completed module:
    `feat(phaseN): module — one-line summary`
    **No Co-Authored-By trailers** — single author only
 7. `git push origin master` after every session
@@ -175,10 +176,10 @@ A module is only "complete" when ALL of these pass:
 - **`rsp = stack_top - 8` for new threads** — leaves an 8-byte slot at the top; `context_switch` jumps to `rip` directly (no `call`/`ret`), so a fresh thread starts with RSP already pointing below the sentinel zero
 
 ### Git / GitHub
-- **GitHub "authored and committed" duplication** — happens when the commit email doesn't match a verified address on the account; use the full noreply: `271907151+MakingVibecodedProjects@users.noreply.github.com`
 - **`filter-branch` requires a clean working tree** — always commit or stash before rewriting history
 - **No `Co-Authored-By` trailers** — single author only; strip them with `--msg-filter 'sed "/^Co-Authored-By:.*/d"'`
 - **`git reset --soft <hash>` + `git reset HEAD -- .`** — the two-step to unstage everything after a soft reset so you can recommit files individually
+- **GitHub "authored and committed" duplication** — see Git Rules for the correct identity config
 
 ---
 
@@ -205,14 +206,16 @@ These files underpin everything — never modify without explicit discussion:
 - Never commit `build/`, `.claude/`, `.vscode/` (covered by .gitignore)
 - After each commit: `git log --oneline -5` to confirm
 - Remote: `https://github.com/MakingVibecodedProjects/NamelessOS`
-- Push after each session end: `git push origin master`
-- When rewriting history (`filter-branch`): requires clean working tree — commit or stash first
-- Force push after history rewrites: `git push --force origin master`
-- Correct git identity (must match exactly to avoid GitHub "authored and committed" duplication):
-  ```
-  git config user.name "MakingVibecodedProjects"
-  git config user.email "271907151+MakingVibecodedProjects@users.noreply.github.com"
-  ```
+- Push after every session: `git push origin master`
+- Force push only after history rewrites: `git push --force origin master`
+
+### Identity
+Run once per machine/session if not already set:
+```bash
+git config user.name "MakingVibecodedProjects"
+git config user.email "$(curl -s https://api.github.com/users/MakingVibecodedProjects | grep '"id"' | head -1 | grep -o '[0-9]*')+MakingVibecodedProjects@users.noreply.github.com"
+```
+> The numeric prefix is the GitHub user ID. Using the wrong email causes GitHub to show "authored and committed" as two separate identities.
 
 ---
 
