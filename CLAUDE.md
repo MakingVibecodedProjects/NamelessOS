@@ -209,13 +209,6 @@ These files underpin everything — never modify without explicit discussion:
 - Push after every session: `git push origin master`
 - Force push only after history rewrites: `git push --force origin master`
 
-### Identity
-Use your own GitHub identity:
-```bash
-git config user.name "YourGitHubUsername"
-git config user.email "your@email.com"
-```
-> Use the email verified on your GitHub account, or your noreply address (`<ID>+<username>@users.noreply.github.com`) from github.com/settings/emails.
 
 ---
 
