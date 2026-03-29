@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 7 Step 3 — `src/net/arp/` (ARP request/reply, 16-entry table, learns sender on every receive, gated reply when `our_ip` set)
-- **Next task:** Phase 7 Step 4 — `src/net/ipv4/` (IPv4 header parser, routing table, IP assignment)
+- **Last completed:** Phase 7 Step 4 — `src/net/ipv4/` (IPv4 header parse/send, internet checksum, on/off-link routing, ARP-miss-drop, protocol dispatch)
+- **Next task:** Phase 7 Step 5 — `src/net/icmp/` (ICMP echo request/reply — ping)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.

@@ -33,6 +33,7 @@ links forward to the next.
 | [PROMPT_21](PROMPT_21.md) | e1000 NIC driver — PCI detect, DMA TX/RX rings, polled mode | Phase 7 | done |
 | [PROMPT_22](PROMPT_22.md) | Ethernet — frame parser/builder, ethertype dispatch | Phase 7 | done |
 | [PROMPT_23](PROMPT_23.md) | ARP — request/reply, 16-entry table | Phase 7 | done |
+| [PROMPT_24](PROMPT_24.md) | IPv4 — header parser, checksum, routing, protocol dispatch | Phase 7 | done |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 
