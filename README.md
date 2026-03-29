@@ -26,7 +26,8 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 5 | SYSCALL/SYSRET dispatch table | done |
 | 6 | Per-process page tables, COW fork | done |
 | 6 | ELF64 loader | done |
-| 6 | Userspace libc, init, shell | pending |
+| 6 | Userspace libc (crt0, malloc, printf, syscall wrappers) | done |
+| 6 | userspace init (PID 1) + shell | pending |
 | 7 | TCP/IP stack (e1000, ARP, IPv4, TCP) | pending |
 | 8 | SMP, TTY, HTTP server | pending |
 

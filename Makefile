@@ -29,7 +29,7 @@ SRC_ASM_OBJS  := $(patsubst src/%.asm, $(BUILD)/asm/%.o, $(SRC_ASM_SRCS))
 
 ALL_OBJS := $(BOOT_ASM_OBJS) $(SRC_ASM_OBJS) $(C_OBJS)
 
-.PHONY: all iso run debug disk clean
+.PHONY: all iso run debug disk userspace clean
 
 all: $(TARGET)
 
@@ -93,6 +93,11 @@ debug: $(ISO)
 		-boot d \
 		-s -S
 
+# ── Userspace (libc.a + crt0.o) ────────────────────────────────────
+userspace:
+	$(MAKE) -C userspace/libc
+
 # ── Clean ───────────────────────────────────────────────────────────
 clean:
 	rm -rf $(BUILD)
+	$(MAKE) -C userspace/libc clean 2>/dev/null || true

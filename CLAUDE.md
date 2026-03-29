@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 6 Step 2 — ELF64 loader (`src/elf/`: `elf_load`, PT_LOAD mapper, PTE flags from p_flags)
-- **Next task:** Phase 6 Step 3 — userspace libc (`userspace/libc/`: crt0, syscall wrappers, malloc, printf, string.h)
+- **Last completed:** Phase 6 Step 3 — userspace libc (`userspace/libc/`: crt0, syscall.asm, string.c, malloc.c, printf.c → `libc.a` + `crt0.o`)
+- **Next task:** Phase 6 Step 4 — `userspace/programs/init` (PID 1) + `userspace/programs/shell` (cd/ls/cat/exec)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
@@ -172,6 +172,11 @@ A module is only "complete" when ALL of these pass:
 - **`poll_drq` must skip BSY** — `if (s & ATA_SR_BSY) continue` before testing DRQ; without it the loop times out immediately
 - **WSL2 clock skew** — `make` may think everything is up to date after a crash due to future timestamps on Windows; fix: `touch src/**/*.c` or `make clean && make iso`
 - **QEMU `-kernel` does not work** — Multiboot2 requires booting via GRUB ISO; `-kernel` bypasses the MB2 info struct setup
+
+### Userspace / libc
+- **`stdarg.h` is a GCC built-in, not a system header** — with `-nostdinc`, `#include <stdarg.h>` fails; fix by adding `-I $(shell gcc -print-file-name=include)` to the userspace Makefile; this brings in only compiler built-ins, not hosted libc headers
+- **`r10 ← rcx` before SYSCALL for 4th argument** — the SYSCALL instruction clobbers rcx (saves user RIP there); Linux ABI uses r10 for arg4; C callers put arg4 in rcx per SysV, so every 4-arg wrapper must `mov r10, rcx` before `mov rax, nr; syscall`
+- **`mcmodel=small` for userspace, `mcmodel=kernel` for kernel** — userspace programs link below 2 GB; using `-mcmodel=kernel` there causes relocation errors; always use `small` for anything in `userspace/`
 
 ### VMM / address spaces
 - **`vmm_switch_to` must skip the write if CR3 is unchanged** — writing the same value to CR3 flushes the TLB unnecessarily; always compare before writing

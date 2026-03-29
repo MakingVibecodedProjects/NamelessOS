@@ -28,6 +28,7 @@ links forward to the next.
 | [PROMPT_16](PROMPT_16.md) | Syscall — SYSCALL/SYSRET, dispatch table, 12 syscalls | Phase 5 | done |
 | [PROMPT_17](PROMPT_17.md) | Per-process page tables, COW fork, CR3 switch | Phase 6 | done |
 | [PROMPT_18](PROMPT_18.md) | ELF64 loader — PT_LOAD mapper, entry point | Phase 6 | done |
+| [PROMPT_19](PROMPT_19.md) | Userspace libc — crt0, syscall wrappers, malloc, printf | Phase 6 | done |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 
