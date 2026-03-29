@@ -29,6 +29,9 @@ void       process_exit(void);
 /* Return a pointer to the currently running process_t. */
 process_t *process_current(void);
 
+/* Update the currently running process pointer (called by scheduler). */
+void       process_set_current(process_t *p);
+
 /* Return a pointer to the process with the given pid, or NULL. */
 process_t *process_get(u32 pid);
 

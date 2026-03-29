@@ -23,6 +23,10 @@ process_t *process_current(void) {
     return current_proc;
 }
 
+void process_set_current(process_t *p) {
+    current_proc = p;
+}
+
 process_t *process_get(u32 pid) {
     if (pid >= PROC_MAX) return NULL;
     if (proc_table[pid].state == PROC_UNUSED) return NULL;

@@ -1,177 +1,151 @@
-# NamelessOS — Claude Code Memory
+# NamelessOS — Claude Code Session Context
 
 ## Project
 Monolithic x86_64 kernel in C (C11), built modularly across sessions.
 Target: QEMU + real bare metal. Bootloader: GRUB2 Multiboot2.
-Higher half kernel at 0xFFFFFFFF80000000. No hosted libc anywhere in kernel/.
+Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
+
+> Build, QEMU, and debug details live in [docs/build.md](docs/build.md),
+> [docs/debug.md](docs/debug.md), and [docs/setup-wsl.md](docs/setup-wsl.md).
+
+---
 
 ## Current Status
-<!-- Claude updates this section at end of every session -->
+
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 5 Step 1 — src/process/ (TCB, 64-slot table, kthread_create, idle pid=0, cpu_context_t)
-- **Next task:** Phase 5 Step 2 — src/scheduler/ (preemptive round-robin, context_switch asm, kthread_create integration)
+- **Last completed:** Phase 5 Step 1 — `src/process/` (TCB, 64-slot table, `kthread_create`, idle pid=0, `cpu_context_t`)
+- **Next task:** Phase 5 Step 2 — `src/scheduler/` (preemptive round-robin, `context_switch` asm, timer-driven tick)
 - **Known issues:** none
-- **Build note:** `make run` boots via GRUB2 ISO (grub.cfg + grub-mkrescue). `make iso` builds the ISO. Direct QEMU `-kernel` does not work with Multiboot2 ELF; always use ISO path.
-- **Critical compiler flag:** `-mno-sse -mno-sse2 -mno-avx` required — without it GCC emits `movaps` in kernel code which causes faults before SSE context save is set up.
+- **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
+- **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
+
+---
 
 ## Architecture Rules (NEVER violate)
+
 - Every subsystem = `src/MODULE/` with `MODULE.h` / `MODULE.c` / `MODULE_internal.h`
 - Cross-module comms: public `.h` API only — never `#include` another module's `.c`
-- Dependency order: `lib → serial/vga → gdt/idt/pic → pmm → vmm → heap → timer/keyboard → process → scheduler → syscall → ata/pci → vfs → net → elf`
-- No hosted libc headers anywhere in `kernel/` or `src/`
-- All log output via `klog(LEVEL, "[module] msg")` — never raw printf in modules
+- No hosted libc headers anywhere in `src/` — not even `<stdint.h>`
+- All log output via `klog(LEVEL, "[module] msg")` — never `printf` in modules
 - `PANIC(fmt, ...)` = prints file/line/registers/stack dump + halts all CPUs
 - Every public function prefixed by module name: `pmm_`, `vfs_`, `tcp_`, etc.
-- Every module has `module_init()` and `module_dump()` — both registered in module_registry
+- Every module has `module_init()` and `module_dump()` — both registered in `module_registry`
+- Zero warnings policy: build must emit **no warnings** at `-Wall -Wextra`
 
-## Subsystem Dependency Graph
+---
+
+## Dependency Order
+
 ```
-[hardware/boot]
-      ↓
-[lib] (string, printf, types — zero deps)
-      ↓
-[serial] [vga]
-      ↓
-[gdt] → [idt] → [pic]
-      ↓
-[pmm] → [vmm] → [heap]
-      ↓
-[timer] → [keyboard] → [pci]
-      ↓
-[process] → [scheduler] → [syscall]
-      ↓
-[ata] → [vfs] → [fat32] [ext2] [tmpfs] [devfs] [initrd]
-      ↓
-[net: e1000 → ethernet → arp → ipv4 → icmp → udp → tcp → socket → dhcp]
-      ↓
-[elf] → [userspace / libc / programs]
+lib → serial/vga → gdt/idt/pic → pmm → vmm → heap
+    → timer → keyboard → pci
+    → ata → vfs → tmpfs → devfs
+    → process → scheduler → syscall
+    → elf → userspace
+    → net (e1000 → ethernet → arp → ipv4 → icmp → udp → tcp → socket → dhcp)
 ```
+
+Module registration order in `src/core/module_registry.c` must match this graph.
+
+---
 
 ## Full Feature Roadmap
 
-### Phase 1 — Kernel Bootstrap
+### Phase 1 — Kernel Bootstrap ✓
 1. Scaffold: Makefile, kernel.ld, boot/entry.asm, src/lib/, src/core/module_registry
-2. src/vga/ — VGA text mode 80x25, kprintf %s %d %x %p %c
-3. src/serial/ — COM1, klog(LEVEL, fmt) with levels DEBUG/INFO/WARN/ERROR/PANIC
-4. src/gdt/ — flat 64-bit GDT, TSS stub
-5. src/idt/ — IDT, exception handlers, PANIC with full register dump
-6. src/pic/ — remap IRQs 0-15 to vectors 32-47, irq_register(n, handler)
+2. `src/vga/` — VGA text mode 80×25, `kprintf` `%s %d %x %p %c`
+3. `src/serial/` — COM1, `klog(LEVEL, fmt)` with DEBUG/INFO/WARN/ERROR/PANIC
+4. `src/gdt/` — flat 64-bit GDT, TSS stub
+5. `src/idt/` — IDT, exception handlers, PANIC with full register dump
+6. `src/pic/` — remap IRQs 0–15 to vectors 32–47, `irq_register(n, handler)`
 
-### Phase 2 — Memory
-7. src/pmm/ — Multiboot2 memory map parser, bitmap frame allocator
-8. src/vmm/ — 4-level page tables, higher half kernel, page fault handler
-9. src/heap/ — slab allocator, kmalloc/kfree/krealloc
+### Phase 2 — Memory ✓
+7. `src/pmm/` — Multiboot2 memory map parser, bitmap frame allocator
+8. `src/vmm/` — 4-level page tables, higher-half kernel, page fault handler
+9. `src/heap/` — slab allocator, `kmalloc` / `kfree` / `krealloc`
 
-### Phase 3 — Drivers
-10. src/timer/ — PIT IRQ0, tick counter, ksleep(ms), timer_register_callback()
-11. src/keyboard/ — PS/2 IRQ1, scancode→ASCII, 256-byte circular buffer
-12. src/pci/ — bus enumeration, pci_find_device(vendor, device)
+### Phase 3 — Drivers ✓
+10. `src/timer/` — PIT IRQ0, tick counter, `ksleep(ms)`, `timer_register_callback()`
+11. `src/keyboard/` — PS/2 IRQ1, scancode→ASCII, 256-byte circular buffer
+12. `src/pci/` — bus enumeration, `pci_find_device(vendor, device)`
 
-### Phase 4 — Storage & Filesystem
-13. src/ata/ — ATA PIO read/write sectors
-14. src/vfs/ — abstract VFS: open/read/write/close/readdir/stat, filesystem_register()
-15. src/fat32/ — FAT32 backend
-16. src/ext2/ — ext2 backend
-17. src/tmpfs/ — in-memory FS for /tmp
-18. src/devfs/ — /dev/null /dev/zero /dev/tty /dev/sda
-19. src/initrd/ — Multiboot2 module as early ramdisk
+### Phase 4 — Storage & Filesystem ✓
+13. `src/ata/` — ATA PIO read/write sectors
+14. `src/vfs/` — abstract VFS: open/read/write/close/readdir/stat, `filesystem_register()`
+15. `src/tmpfs/` — in-memory FS for `/tmp`
+16. `src/devfs/` — `/dev/null` `/dev/zero` `/dev/tty` `/dev/sda`
 
-### Phase 5 — Process & Scheduling
-20. src/process/ — TCB, kernel stacks, process table, pid allocator
-21. src/scheduler/ — preemptive round-robin, full context switch (SSE), kthread_create/exit
-22. src/syscall/ — SYSCALL/SYSRET dispatch table
+### Phase 5 — Process & Scheduling ← current
+17. `src/process/` ✓ — TCB, kernel stacks, process table, pid allocator
+18. `src/scheduler/` — preemptive round-robin, `context_switch` asm, `kthread_create`/exit
+19. `src/syscall/` — SYSCALL/SYSRET dispatch table
     Syscalls: read write open close exit getpid fork execve waitpid mmap munmap brk
 
 ### Phase 6 — Userspace
-23. src/vmm/ addition — per-process page tables, COW fork
-24. src/elf/ — ELF64 loader
-25. userspace/libc/ — crt0, syscall wrappers, malloc, printf, string.h
-26. userspace/programs/init — PID 1
-27. userspace/programs/shell — cd ls cat exec
+20. `src/vmm/` addition — per-process page tables, COW fork
+21. `src/elf/` — ELF64 loader
+22. `userspace/libc/` — crt0, syscall wrappers, malloc, printf, string.h
+23. `userspace/programs/init` — PID 1
+24. `userspace/programs/shell` — cd ls cat exec
 
 ### Phase 7 — Networking
-28. src/net/e1000/ — Intel e1000, PCI detect, DMA TX/RX rings
-29. src/net/ethernet/ — frame parse/build, ethertype dispatch
-30. src/net/arp/ — request/reply, ARP table
-31. src/net/ipv4/ — headers, routing table
-32. src/net/icmp/ — echo req/reply (ping)
-33. src/net/udp/ — datagrams
-34. src/net/tcp/ — full state machine, sliding window, retransmit
-35. src/net/socket/ — BSD socket syscalls
-36. src/net/dhcp/ — DHCP client, obtain IP on boot
+25. `src/net/e1000/` — Intel e1000, PCI detect, DMA TX/RX rings
+26. `src/net/ethernet/` — frame parse/build, ethertype dispatch
+27. `src/net/arp/` — request/reply, ARP table
+28. `src/net/ipv4/` — headers, routing table
+29. `src/net/icmp/` — echo req/reply (ping)
+30. `src/net/udp/` — datagrams
+31. `src/net/tcp/` — full state machine, sliding window, retransmit
+32. `src/net/socket/` — BSD socket syscalls
+33. `src/net/dhcp/` — DHCP client, obtain IP on boot
 
 ### Phase 8 — Advanced
-37. src/smp/ — APIC SIPI, per-CPU data (gs-based), spinlocks
-38. src/tty/ — line discipline, /dev/tty0
-39. src/dynlink/ — shared .so, PLT/GOT
-40. userspace/programs/httpd — minimal HTTP/1.0 server
+34. `src/smp/` — APIC SIPI, per-CPU data (gs-based), spinlocks
+35. `src/tty/` — line discipline, `/dev/tty0`
+36. `src/dynlink/` — shared `.so`, PLT/GOT
+37. `userspace/programs/httpd` — minimal HTTP/1.0 server
 
-## Build Commands
-```bash
-make            # build kernel ELF → build/namelessos.elf
-make run        # boot in QEMU
-make debug      # QEMU + GDB stub on :1234
-make userspace  # cross-compile all userspace ELFs
-make disk       # create disk.img FAT32 + userspace programs
-make clean
-```
-
-**Windows:** all tools run under WSL2. Open the repo in a WSL terminal or prefix
-every make call with `wsl`:
-```powershell
-wsl make iso
-wsl make run
-```
-See `docs/setup-wsl.md` for first-time setup.
-
-## Full QEMU Command
-```bash
-qemu-system-x86_64 \
-  -cdrom build/namelessos.iso \
-  -m 512M \
-  -serial stdio \
-  -netdev user,id=net0 -device e1000,netdev=net0 \
-  -drive file=disk.img,format=raw,if=ide \
-  -display none \
-  -boot d
-```
-
-## Cross-Compiler Flags
-- **Kernel:** `-ffreestanding -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel -fno-pic -fno-pie -mno-sse -mno-sse2 -mno-avx -O2 -Wall -Wextra -std=c11`
-- **Userspace:** `-nostdlib -O2`
-- **Assembler:** NASM for `.asm` files
+---
 
 ## Session Start Protocol (EVERY session, no exceptions)
-1. Run `find src/ -name "*.h" | sort` — read ALL public headers
-2. Read `src/core/module_registry.c` — see which modules are registered
-3. Read "Current Status" above — know exactly where we left off
-4. Run `/status` for a quick overview
-5. Implement ONE complete module at a time
-6. After each module: show QEMU test command + expected serial output
-7. NEVER break existing modules — state refactors explicitly first
+
+1. Read `CLAUDE.md` **Current Status** — know exactly where we left off
+2. Run `find src/ -name "*.h" | sort` — scan all public headers
+3. Read `src/core/module_registry.c` — verify module registration order
+4. Implement ONE complete module at a time
+5. After each module: show expected serial output, build and verify zero warnings
+6. NEVER break existing modules — state any refactors explicitly before making them
 
 ## Session End Protocol (EVERY session, automatically — never wait to be asked)
-When the session is wrapping up or a natural stopping point is reached, Claude
-automatically does ALL of these without being prompted:
-1. Read ALL existing `prompts/PROMPT_*.md` files for style reference, then write
-   `prompts/PROMPT_N.md` — N is highest existing PROMPT number + 1.
-   Match the exact style of prior prompts: header, what was built, key decisions,
-   verified serial output, next session prompt section.
-2. Update "Current Status" in this CLAUDE.md with what was done and what's next
-3. **Git commit** — run `git status`, then `git add` all new/modified source files
-   and commit with message: `feat(phaseN): MODULE — one-line summary`
-   One commit per completed module or logical group. Never batch unrelated modules.
 
-## Git Commit Rules
-- Commit after EVERY completed module — do not accumulate uncommitted work
-- Format: `feat(phaseN): module — description` (e.g. `feat(phase3): timer — PIT 1000Hz IRQ0`)
-- Always run `git status` before committing to verify what will be staged
-- Never commit `build/`, `.claude/`, `.vscode/` — these are in .gitignore or untracked
-- After each commit, run `git log --oneline -5` to confirm
+1. Read ALL existing `prompts/PROMPT_*.md` for style reference
+2. Write `prompts/PROMPT_N.md` (N = highest + 1) matching the exact style
+3. Update **Current Status** in this file
+4. Update `docs/architecture.md` if new modules, layers, or rules were added
+5. Git commit — one commit per completed module:
+   `feat(phaseN): module — one-line summary`
+6. Never batch unrelated modules into one commit
+
+---
+
+## Git Rules
+
+- Commit after EVERY completed module — never accumulate
+- Format: `feat(phaseN): module — description`
+  Example: `feat(phase3): timer — PIT 1000Hz IRQ0`
+- Always `git status` before committing — verify what will be staged
+- Never commit `build/`, `.claude/`, `.vscode/` (covered by .gitignore)
+- After each commit: `git log --oneline -5` to confirm
+- Remote: `https://github.com/MakingVibecodedProjects/NamelessOS`
+- Push after each session end: `git push origin master`
+
+---
 
 ## Coding Style
+
 - Every public API function gets a one-line doc comment in the `.h`
 - Magic numbers = named constants in `MODULE_internal.h`
 - Structs: `typedef struct { ... } name_t;`
-- Error returns: 0 = success, negative errno = failure
+- Error returns: 0 = success, negative = failure
 - Always NULL-check pointers before dereferencing
+- Prefer explicit casts over implicit conversions
