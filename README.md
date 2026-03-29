@@ -25,7 +25,7 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 5 | Preemptive round-robin scheduler | done |
 | 5 | SYSCALL/SYSRET dispatch table | done |
 | 6 | Per-process page tables, COW fork | done |
-| 6 | ELF64 loader | pending |
+| 6 | ELF64 loader | done |
 | 6 | Userspace libc, init, shell | pending |
 | 7 | TCP/IP stack (e1000, ARP, IPv4, TCP) | pending |
 | 8 | SMP, TTY, HTTP server | pending |
@@ -108,7 +108,8 @@ Expected serial output (COM1 → stdout):
 │   ├── devfs/          # /dev virtual filesystem
 │   ├── process/        # Process control blocks
 │   ├── scheduler/      # Round-robin preemptive scheduler
-│   └── syscall/        # SYSCALL/SYSRET dispatch table
+│   ├── syscall/        # SYSCALL/SYSRET dispatch table
+│   └── elf/            # ELF64 loader
 ├── prompts/            # Per-session build logs (PROMPT_N.md)
 ├── docs/               # Setup and architecture docs
 ├── kernel.ld           # Linker script (higher-half kernel @ 0xFFFFFFFF80000000)

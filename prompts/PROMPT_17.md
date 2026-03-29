@@ -1,4 +1,4 @@
-[← 16](PROMPT_16.md) | [index](README.md) | **17** | 18 →
+[← 16](PROMPT_16.md) | [index](README.md) | **17** | [18 →](PROMPT_18.md)
 
 ---
 
@@ -47,6 +47,7 @@
 
 [PROMPT_18 →](PROMPT_18.md) — Phase 6 Step 2: ELF64 loader (`src/elf/`).
 
+
 ---
 
-[← 16](PROMPT_16.md) | [index](README.md) | **17** | 18 →
+[← 16](PROMPT_16.md) | [index](README.md) | **17** | [18 →](PROMPT_18.md)
