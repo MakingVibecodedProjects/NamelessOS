@@ -19,6 +19,9 @@ void arp_insert(u32 ip, const u8 mac[6]);
 /* Send an ARP request for ip (host byte order). */
 void arp_request(u32 ip);
 
+/* Set our IPv4 address so ARP can reply to who-has requests. */
+void arp_set_ip(u32 ip);
+
 /* Module descriptor — registered in module_registry. */
 extern kernel_module_t mod_arp;
 

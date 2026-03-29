@@ -124,6 +124,11 @@ static void arp_rx(const u8 *payload, u16 len, const u8 src_mac[6]) {
     }
 }
 
+/* ── arp_set_ip ─────────────────────────────────────────────────────── */
+void arp_set_ip(u32 ip) {
+    our_ip = ip;
+}
+
 /* ── Module init / dump ─────────────────────────────────────────────── */
 static int arp_init_impl(void) {
     memset(table, 0, sizeof(table));
