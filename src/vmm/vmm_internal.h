@@ -18,6 +18,7 @@
 #define PTE_HUGE       (1ULL << 7)   /* PS bit — 2MB/1GB page */
 #define PTE_GLOBAL     (1ULL << 8)
 #define PTE_NX         (1ULL << 63)
+#define PTE_COW        (1ULL << 9)    /* OS-defined: copy-on-write pending */
 
 /* Mask to extract the physical frame address from a PTE */
 #define PTE_ADDR_MASK  0x000FFFFFFFFFF000ULL

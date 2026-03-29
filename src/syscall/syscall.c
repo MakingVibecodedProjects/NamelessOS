@@ -4,6 +4,7 @@
 #include "../vfs/vfs.h"
 #include "../process/process.h"
 #include "../serial/serial.h"
+#include "../scheduler/scheduler.h"
 
 /* ── MSR helpers ─────────────────────────────────────────────────── */
 static void wrmsr(u32 msr, u64 val) {
@@ -89,6 +90,17 @@ static u64 sys_exit(u64 a0 __attribute__((unused)),
     return 0; /* unreachable */
 }
 
+/* fork() — COW clone current process; returns child pid in parent, 0 in child */
+static u64 sys_fork(u64 a0 __attribute__((unused)),
+                    u64 a1 __attribute__((unused)),
+                    u64 a2 __attribute__((unused)),
+                    u64 a3 __attribute__((unused)),
+                    u64 a4 __attribute__((unused)),
+                    u64 a5 __attribute__((unused))) {
+    i32 ret = process_fork();
+    return (u64)(i64)ret;
+}
+
 /* Stubs for Phase 6 */
 static u64 sys_enosys(u64 a0 __attribute__((unused)),
                       u64 a1 __attribute__((unused)),
@@ -131,7 +143,7 @@ int syscall_init(void) {
     dispatch_table[SYS_CLOSE]  = sys_close;
     dispatch_table[SYS_GETPID] = sys_getpid;
     dispatch_table[SYS_EXIT]   = sys_exit;
-    dispatch_table[SYS_FORK]   = sys_enosys;
+    dispatch_table[SYS_FORK]   = sys_fork;
     dispatch_table[SYS_EXECVE] = sys_enosys;
     dispatch_table[SYS_WAITPID]= sys_enosys;
     dispatch_table[SYS_MMAP]   = sys_enosys;

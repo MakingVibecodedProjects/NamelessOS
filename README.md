@@ -24,7 +24,9 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 5 | Process subsystem (TCB, kthread_create, idle pid=0) | done |
 | 5 | Preemptive round-robin scheduler | done |
 | 5 | SYSCALL/SYSRET dispatch table | done |
-| 6 | Userspace (ELF loader, libc, init, shell) | pending |
+| 6 | Per-process page tables, COW fork | done |
+| 6 | ELF64 loader | pending |
+| 6 | Userspace libc, init, shell | pending |
 | 7 | TCP/IP stack (e1000, ARP, IPv4, TCP) | pending |
 | 8 | SMP, TTY, HTTP server | pending |
 

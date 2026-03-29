@@ -1,4 +1,4 @@
-[← 15](PROMPT_15.md) | [index](README.md) | **16** | 17 →
+[← 15](PROMPT_15.md) | [index](README.md) | **16** | [17 →](PROMPT_17.md)
 
 ---
 
@@ -39,4 +39,4 @@
 
 ---
 
-[← 15](PROMPT_15.md) | [index](README.md) | **16** | 17 →
+[← 15](PROMPT_15.md) | [index](README.md) | **16** | [17 →](PROMPT_17.md)

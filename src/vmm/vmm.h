@@ -26,6 +26,27 @@ void vmm_unmap_page(u64 virt);
 /* Walk page tables and return the physical address for virt, or 0 if unmapped. */
 u64  vmm_get_phys(u64 virt);
 
+/* ── Per-process address space ───────────────────────────────────── */
+
+/* Allocate a new PML4 whose upper 256 entries (kernel half) are copied
+   from the boot PML4.  User half is zeroed.  Returns physical address. */
+u64  vmm_create_user_pml4(void);
+
+/* Map a 4 KB page into a specific address space (identified by pml4_phys). */
+int  vmm_map_user_page(u64 pml4_phys, u64 virt, u64 phys, u64 flags);
+
+/* COW clone: copy user half of src_pml4 into a new PML4, marking all
+   writable user PTEs as read-only + PTE_COW in both src and dst.
+   Returns the new PML4 physical address, or 0 on OOM. */
+u64  vmm_fork_pml4(u64 src_pml4_phys);
+
+/* Free all user-space page table frames (not the mapped pages themselves)
+   and the PML4 frame.  Kernel half entries are not freed. */
+void vmm_destroy_user_pml4(u64 pml4_phys);
+
+/* Load a PML4 into CR3 (flush TLB). */
+void vmm_switch_to(u64 pml4_phys);
+
 /* Module descriptor — registered in module_registry. */
 extern kernel_module_t mod_vmm;
 

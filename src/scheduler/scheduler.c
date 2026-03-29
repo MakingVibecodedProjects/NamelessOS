@@ -3,6 +3,7 @@
 #include "../process/process_internal.h"
 #include "../timer/timer.h"
 #include "../serial/serial.h"
+#include "../vmm/vmm.h"
 
 /* ── Tunables ────────────────────────────────────────────────────── */
 #define SCHED_TICKS_PER_SLICE   10u   /* yield every 10 ms */
@@ -14,8 +15,8 @@ static volatile u32 tick_counter = 0;
 /* Declare the assembly context-switch routine */
 extern void context_switch(cpu_context_t *old_ctx, cpu_context_t *new_ctx);
 
-/* ── run_queue_add ───────────────────────────────────────────────── */
-static void run_queue_add(process_t *p) {
+/* ── scheduler_add / run_queue_add ───────────────────────────────── */
+void scheduler_add(process_t *p) {
     if (!run_queue) {
         p->next   = p;   /* single-element circular list */
         run_queue = p;
@@ -68,6 +69,10 @@ void scheduler_yield(void) {
        thread sees itself as current when it runs. */
     process_set_current(next);
 
+    /* Switch address space if the next process has its own PML4 */
+    if (next->pml4_phys)
+        vmm_switch_to(next->pml4_phys);
+
     cpu_context_t *old_ctx = current ? &current->ctx : &next->ctx;
     context_switch(old_ctx, &next->ctx);
     /* Execution resumes here when THIS process is switched back in */
@@ -79,7 +84,7 @@ int scheduler_init(void) {
     process_t *idle = process_get(0);
     if (!idle) return -1;
 
-    run_queue_add(idle);
+    scheduler_add(idle);
 
     /* Register tick callback with the timer */
     if (timer_register_callback(scheduler_tick) != 0) return -1;

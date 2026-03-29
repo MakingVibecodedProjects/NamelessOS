@@ -16,6 +16,9 @@ void scheduler_yield(void);
    SCHED_TICKS_PER_SLICE ticks. */
 void scheduler_tick(void);
 
+/* Add a READY process to the run queue (called by process_fork). */
+void scheduler_add(process_t *p);
+
 /* Module descriptor — registered in module_registry after mod_process. */
 extern kernel_module_t mod_scheduler;
 

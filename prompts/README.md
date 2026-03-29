@@ -26,6 +26,7 @@ links forward to the next.
 | [PROMPT_14](PROMPT_14.md) | Process — TCB, kthread_create, idle pid=0 | Phase 5 | done |
 | [PROMPT_15](PROMPT_15.md) | Scheduler — round-robin, context_switch | Phase 5 | done |
 | [PROMPT_16](PROMPT_16.md) | Syscall — SYSCALL/SYSRET, dispatch table, 12 syscalls | Phase 5 | done |
+| [PROMPT_17](PROMPT_17.md) | Per-process page tables, COW fork, CR3 switch | Phase 6 | done |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 

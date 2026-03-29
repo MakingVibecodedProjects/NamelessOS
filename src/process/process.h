@@ -12,6 +12,8 @@ typedef struct process {
     char          name[32];
     u8           *kstack;      /* base of kernel stack (kmalloc'd) */
     cpu_context_t ctx;         /* saved CPU context */
+    u64           pml4_phys;   /* physical address of this process's PML4;
+                                  0 = share the boot/kernel address space */
     struct process *next;      /* intrusive linked list for scheduler */
 } process_t;
 
@@ -25,6 +27,10 @@ i32        kthread_create(const char *name, void (*fn)(void));
 
 /* Mark the current process as ZOMBIE and yield to the scheduler. */
 void       process_exit(void);
+
+/* COW-fork the current process.  Returns child pid in parent, 0 in child,
+   or -1 on failure. */
+i32        process_fork(void);
 
 /* Return a pointer to the currently running process_t. */
 process_t *process_current(void);

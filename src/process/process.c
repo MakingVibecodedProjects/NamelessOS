@@ -3,6 +3,8 @@
 #include "../lib/string.h"
 #include "../serial/serial.h"
 #include "../heap/heap.h"
+#include "../vmm/vmm.h"
+#include "../scheduler/scheduler.h"
 
 /* ── Process table ───────────────────────────────────────────────── */
 static process_t  proc_table[PROC_MAX];
@@ -50,6 +52,7 @@ i32 kthread_create(const char *name, void (*fn)(void)) {
         p->state = PROC_UNUSED;
         return -1;
     }
+    p->pml4_phys = 0;   /* shares kernel address space until fork/exec */
 
     /* Set up initial context:
        rip = fn (entry point)
@@ -66,6 +69,57 @@ i32 kthread_create(const char *name, void (*fn)(void)) {
 
     klog(LOG_DEBUG, "[process] created thread '%s' pid=%u rip=0x%x",
          name, (unsigned)pid, (unsigned)p->ctx.rip);
+    return pid;
+}
+
+/* ── process_fork ────────────────────────────────────────────────── */
+i32 process_fork(void) {
+    if (!current_proc) return -1;
+
+    i32 pid = alloc_pid();
+    if (pid < 0) return -1;
+
+    process_t *child = &proc_table[pid];
+    child->pid   = (u32)pid;
+    child->state = PROC_READY;
+    child->next  = NULL;
+    strncpy(child->name, current_proc->name, sizeof(child->name) - 1);
+    child->name[sizeof(child->name) - 1] = '\0';
+
+    /* Allocate kernel stack */
+    child->kstack = (u8 *)kmalloc(KSTACK_SIZE);
+    if (!child->kstack) {
+        child->state = PROC_UNUSED;
+        return -1;
+    }
+
+    /* Clone address space (COW) */
+    u64 src_pml4 = current_proc->pml4_phys
+                   ? current_proc->pml4_phys
+                   : vmm_create_user_pml4();   /* promote parent if needed */
+    if (!src_pml4) {
+        kfree(child->kstack);
+        child->state = PROC_UNUSED;
+        return -1;
+    }
+    current_proc->pml4_phys = src_pml4;
+
+    child->pml4_phys = vmm_fork_pml4(src_pml4);
+    if (!child->pml4_phys) {
+        kfree(child->kstack);
+        child->state = PROC_UNUSED;
+        return -1;
+    }
+
+    /* Copy parent context; child returns 0 from fork */
+    child->ctx        = current_proc->ctx;
+    child->ctx.rsp    = (u64)(usize)(child->kstack + KSTACK_SIZE) - 8;
+    /* rax will be set to 0 by syscall_dispatch returning 0 to child */
+
+    scheduler_add(child);
+
+    klog(LOG_DEBUG, "[process] forked pid=%u → child pid=%u",
+         (unsigned)current_proc->pid, (unsigned)pid);
     return pid;
 }
 
@@ -104,6 +158,7 @@ int process_init(void) {
     idle->next  = NULL;
     strncpy(idle->name, "idle", sizeof(idle->name) - 1);
 
+    idle->pml4_phys = 0;   /* boot address space */
     current_proc = idle;
 
     klog(LOG_INFO, "[process] process subsystem ready, idle pid=0");

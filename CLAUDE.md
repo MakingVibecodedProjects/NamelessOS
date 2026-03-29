@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 5 Step 3 — `src/syscall/` (SYSCALL/SYSRET dispatch, 12 syscalls, user GDT segments)
-- **Next task:** Phase 6 Step 1 — per-process page tables + COW fork (`src/vmm/` addition)
+- **Last completed:** Phase 6 Step 1 — per-process PML4s, COW fork, CR3 switch on context switch (`src/vmm/` additions, `process_fork`, `scheduler_add`)
+- **Next task:** Phase 6 Step 2 — ELF64 loader (`src/elf/`)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
@@ -172,6 +172,12 @@ A module is only "complete" when ALL of these pass:
 - **`poll_drq` must skip BSY** — `if (s & ATA_SR_BSY) continue` before testing DRQ; without it the loop times out immediately
 - **WSL2 clock skew** — `make` may think everything is up to date after a crash due to future timestamps on Windows; fix: `touch src/**/*.c` or `make clean && make iso`
 - **QEMU `-kernel` does not work** — Multiboot2 requires booting via GRUB ISO; `-kernel` bypasses the MB2 info struct setup
+
+### VMM / address spaces
+- **`vmm_switch_to` must skip the write if CR3 is unchanged** — writing the same value to CR3 flushes the TLB unnecessarily; always compare before writing
+- **`vmm_map_user_page` must only `invlpg` when the target PML4 is loaded** — firing `invlpg` for a different address space has no effect and would be confusing; gate it on `read_cr3() == target_pml4_phys`
+- **COW fault check: `err & 3 == 3` means PRESENT+WRITE** — the error code bit layout is bit0=P, bit1=W/R, bit2=U/S; a COW fault is always a write to a present page (both bits set); non-present faults are allocation, not COW
+- **`vmm_fork_pml4` must reload parent's CR3 after marking PTEs read-only** — after clearing PTE_WRITE and setting PTE_COW in the parent's PTs, the TLB may still have the old writable entries cached; `write_cr3(src_pml4_phys)` flushes them
 
 ### Syscall
 - **`o64 sysret` is mandatory in NASM** — without the `o64` prefix NASM emits the 32-bit SYSRET variant, which returns to 32-bit compatibility mode instead of 64-bit long mode; the CPU immediately triple-faults
