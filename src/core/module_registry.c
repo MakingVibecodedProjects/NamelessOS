@@ -19,6 +19,7 @@
 #include "../syscall/syscall.h"
 #include "../elf/elf.h"
 #include "../net/e1000/e1000.h"
+#include "../net/ethernet/ethernet.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
@@ -42,6 +43,7 @@ static kernel_module_t *modules[] = {
     &mod_syscall,
     &mod_elf,
     &mod_e1000,
+    &mod_ethernet,
 };
 
 #define MODULE_COUNT ((int)(sizeof(modules) / sizeof(modules[0])))
