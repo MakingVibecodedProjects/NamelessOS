@@ -55,7 +55,7 @@
 
 ## Next session
 
-PROMPT_28 — Phase 7 Step 8: `src/net/socket/` — BSD socket syscalls (socket, bind, connect, accept, send, recv, close).
+[PROMPT_28 →](PROMPT_28.md) — Phase 7 Step 8: `src/net/socket/` — BSD socket syscalls (socket, bind, connect, accept, send, recv, close).
 
 ---
 

@@ -39,7 +39,7 @@
 
 ## Next session
 
-PROMPT_26 — Phase 7 Step 6: `src/net/udp/` — UDP datagrams.
+[PROMPT_26 →](PROMPT_26.md) — Phase 7 Step 6: `src/net/udp/` — UDP datagrams.
 
 ---
 

@@ -39,7 +39,7 @@
 
 ## Next session
 
-PROMPT_27 — Phase 7 Step 7: `src/net/tcp/` — full TCP state machine, sliding window, retransmit.
+[PROMPT_27 →](PROMPT_27.md) — Phase 7 Step 7: `src/net/tcp/` — full TCP state machine, sliding window, retransmit.
 
 ---
 
