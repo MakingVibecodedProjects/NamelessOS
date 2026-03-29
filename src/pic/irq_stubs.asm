@@ -12,6 +12,8 @@
 bits 64
 
 extern irq_dispatch
+extern scheduler_yield
+extern scheduler_yield_pending
 
 ; ── Common IRQ trampoline ─────────────────────────────────────────────
 irq_common:
@@ -37,6 +39,16 @@ irq_common:
     sub  rsp, 8
     call irq_dispatch
     add  rsp, 8
+
+    ; ── Deferred preemption point ───────────────────────────────────
+    ; scheduler_tick() sets scheduler_yield_pending instead of calling
+    ; scheduler_yield() directly (to avoid misaligned stack frames).
+    ; We check the flag here, from a clean call site, and yield if set.
+    cmp  dword [rel scheduler_yield_pending], 0
+    je   .no_yield
+    mov  dword [rel scheduler_yield_pending], 0
+    call scheduler_yield
+.no_yield:
 
     ; Restore scratch registers
     pop  r11

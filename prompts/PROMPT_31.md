@@ -1,4 +1,4 @@
-[← 30](PROMPT_30.md) | [index](README.md) | **31** | 32 →
+[← 30](PROMPT_30.md) | [index](README.md) | **31** | [32 →](PROMPT_32.md)
 
 ---
 
@@ -45,8 +45,8 @@
 
 ## Next session
 
-32 → — Phase 8 Step 3: launch init — embed init ELF, `elf_load` into new PML4, `iretq` to userspace PID 1
+[PROMPT_32 →](PROMPT_32.md) — Phase 8 Step 3: init launch, scheduler stability, e1000 MMIO fix, shell keyboard input
 
 ---
 
-[← 30](PROMPT_30.md) | [index](README.md) | **31** | 32 →
+[← 30](PROMPT_30.md) | [index](README.md) | **31** | [32 →](PROMPT_32.md)

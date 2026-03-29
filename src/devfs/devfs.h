@@ -13,6 +13,10 @@ int devfs_init(void);
    and custom ops vtable.  Returns 0 on success, -1 on error. */
 int devfs_register(const char *name, u32 flags, fs_ops_t *ops);
 
+/* Get a device node by name directly (bypasses VFS path lookup).
+   Fills *out with the node and returns 0, or returns -1 if not found. */
+int devfs_get_node(const char *name, vfs_node_t *out);
+
 /* Module descriptor — registered in module_registry. */
 extern kernel_module_t mod_devfs;
 

@@ -56,7 +56,7 @@ static int elf_load_segment(const u8 *buf, usize buf_size,
         u64 frame = pmm_alloc_frame();
         if (!frame) return -1;
 
-        u8 *kva = (u8 *)(usize)frame;   /* identity-mapped */
+        u8 *kva = (u8 *)PHYS_TO_VIRT(frame);
         memset(kva, 0, PAGE_SIZE);
 
         /* Copy the slice of file data that falls in this page */

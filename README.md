@@ -39,7 +39,7 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 7 | DHCP client (obtains IP 10.0.2.15 from QEMU SLIRP on boot) | done |
 | 8 | SMP — LAPIC, per-CPU gs data, spinlocks, AP trampoline | done |
 | 8 | TTY — cooked mode line discipline, /dev/tty0 | done |
-| 8 | Init launch — embed init ELF, iretq to PID 1 | pending |
+| 8 | Init launch — embed init/shell ELF, iretq to PID 1, shell keyboard input | done |
 | 8 | Dynamic linker, HTTP server | pending |
 
 ## Roadmap

@@ -29,7 +29,7 @@ SRC_ASM_OBJS  := $(patsubst src/%.asm, $(BUILD)/asm/%.o, $(SRC_ASM_SRCS))
 
 ALL_OBJS := $(BOOT_ASM_OBJS) $(SRC_ASM_OBJS) $(C_OBJS)
 
-.PHONY: all iso run debug disk userspace clean
+.PHONY: all iso run run-gui debug disk userspace clean
 
 all: $(TARGET)
 
@@ -80,6 +80,18 @@ run: $(ISO)
 		-display none \
 		-boot d
 
+# ── Run in QEMU with VGA display window ────────────────────────────
+run-gui: $(ISO)
+	@test -f $(DISK) || $(MAKE) disk
+	qemu-system-x86_64 \
+		-drive file=$(DISK),format=raw,if=ide,index=0 \
+		-drive file=$(ISO),format=raw,media=cdrom,index=1 \
+		-m 512M \
+		-serial stdio \
+		-netdev user,id=net0 -device e1000,netdev=net0 \
+		-display sdl \
+		-boot d
+
 # ── Debug: QEMU + GDB stub on :1234 ────────────────────────────────
 debug: $(ISO)
 	@test -f $(DISK) || $(MAKE) disk
@@ -97,6 +109,27 @@ debug: $(ISO)
 userspace:
 	$(MAKE) -C userspace/libc
 	$(MAKE) -C userspace/programs
+	$(MAKE) src/init_launch/init_elf.c src/init_launch/shell_elf.c
+
+# ── Embed init ELF as C byte array ─────────────────────────────────
+INIT_ELF  := $(BUILD)/userspace/programs/init
+SHELL_ELF := $(BUILD)/userspace/programs/shell
+
+src/init_launch/init_elf.c: $(INIT_ELF)
+	@echo "GEN: $@"
+	@printf '#include "../lib/types.h"\n' > $@
+	@printf 'const u8 init_elf_data[] = {\n' >> $@
+	@xxd -i < $< | sed 's/^  /    /' >> $@
+	@printf '};\n' >> $@
+	@printf 'const u32 init_elf_size = sizeof(init_elf_data);\n' >> $@
+
+src/init_launch/shell_elf.c: $(SHELL_ELF)
+	@echo "GEN: $@"
+	@printf '#include "../lib/types.h"\n' > $@
+	@printf 'const u8 shell_elf_data[] = {\n' >> $@
+	@xxd -i < $< | sed 's/^  /    /' >> $@
+	@printf '};\n' >> $@
+	@printf 'const u32 shell_elf_size = sizeof(shell_elf_data);\n' >> $@
 
 # ── Clean ───────────────────────────────────────────────────────────
 clean:

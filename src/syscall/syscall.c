@@ -5,6 +5,13 @@
 #include "../process/process.h"
 #include "../serial/serial.h"
 #include "../scheduler/scheduler.h"
+#include "../elf/elf.h"
+#include "../pmm/pmm.h"
+#include "../vmm/vmm.h"
+#include "../vmm/vmm_internal.h"
+#include "../gdt/gdt.h"
+#include "../lib/string.h"
+#include "../heap/heap.h"
 
 /* ── MSR helpers ─────────────────────────────────────────────────── */
 static void wrmsr(u32 msr, u64 val) {
@@ -19,8 +26,12 @@ static u64 rdmsr(u32 msr) {
     return ((u64)hi << 32) | lo;
 }
 
-/* ── Entry point (defined in syscall_entry.asm) ──────────────────── */
+/* ── Entry point and globals (syscall_entry.asm) ─────────────────── */
 extern void syscall_entry(void);
+extern u64  syscall_kernel_rsp;        /* updated by syscall_set_kernel_rsp() */
+extern u64  syscall_saved_user_rip;    /* user RIP saved at SYSCALL entry */
+extern u64  syscall_saved_user_rsp;    /* user RSP saved at SYSCALL entry */
+extern u64  syscall_saved_user_rflags; /* user RFLAGS saved at SYSCALL entry */
 
 /* ── Dispatch table ──────────────────────────────────────────────── */
 typedef u64 (*syscall_fn_t)(u64, u64, u64, u64, u64, u64);
@@ -80,12 +91,14 @@ static u64 sys_getpid(u64 a0 __attribute__((unused)),
 }
 
 /* exit(status) — marks current process ZOMBIE and yields */
-static u64 sys_exit(u64 a0 __attribute__((unused)),
+static u64 sys_exit(u64 status,
                     u64 a1 __attribute__((unused)),
                     u64 a2 __attribute__((unused)),
                     u64 a3 __attribute__((unused)),
                     u64 a4 __attribute__((unused)),
                     u64 a5 __attribute__((unused))) {
+    process_t *p = process_current();
+    if (p) p->exit_status = (i32)(i64)status;
     process_exit();
     return 0; /* unreachable */
 }
@@ -99,6 +112,123 @@ static u64 sys_fork(u64 a0 __attribute__((unused)),
                     u64 a5 __attribute__((unused))) {
     i32 ret = process_fork();
     return (u64)(i64)ret;
+}
+
+/* ── Embedded ELF table for execve ──────────────────────────────── */
+extern const u8  shell_elf_data[];
+extern const u32 shell_elf_size;
+
+#define EXEC_USTACK_TOP    0x7FFFF000ULL
+#define EXEC_USTACK_PAGES  4
+#define EXEC_USER_RFLAGS   0x202ULL
+#define EXEC_SEG_USER_CODE 0x23u
+#define EXEC_SEG_USER_DATA 0x1Bu
+
+/* execve(path, argv, envp) → does not return on success, -1 on failure */
+static u64 sys_execve(u64 path_ptr,
+                      u64 a1 __attribute__((unused)),
+                      u64 a2 __attribute__((unused)),
+                      u64 a3 __attribute__((unused)),
+                      u64 a4 __attribute__((unused)),
+                      u64 a5 __attribute__((unused))) {
+    const char *path = (const char *)(usize)path_ptr;
+
+    /* Find embedded ELF — only /bin/shell for now */
+    const u8 *elf_data = NULL;
+    u32       elf_size = 0;
+    if (path) {
+        const char *want = "/bin/shell";
+        u32 i = 0;
+        while (path[i] && want[i] && path[i] == want[i]) i++;
+        if (!path[i] && !want[i]) {
+            elf_data = shell_elf_data;
+            elf_size = shell_elf_size;
+        }
+    }
+    if (!elf_data) return (u64)(i64)(-ENOENT);
+
+    process_t *p = process_current();
+    if (!p) return (u64)(i64)(-ESRCH);
+
+    /* Replace address space */
+    u64 old_pml4 = p->pml4_phys;
+    u64 new_pml4 = vmm_create_user_pml4();
+    if (!new_pml4) return (u64)(i64)(-ENOMEM);
+
+    /* Load ELF into new PML4 */
+    u64 entry = 0;
+    if (elf_load(elf_data, (usize)elf_size, new_pml4, &entry) != 0) {
+        vmm_destroy_user_pml4(new_pml4);
+        return (u64)(i64)(-ENOEXEC);
+    }
+
+    /* Map user stack — zero frames via PHYS_TO_VIRT (higher-half, always accessible) */
+    for (u32 i = 0; i < EXEC_USTACK_PAGES; i++) {
+        u64 frame = pmm_alloc_frame();
+        if (!frame) { vmm_destroy_user_pml4(new_pml4); return (u64)(i64)(-ENOMEM); }
+        memset((void *)PHYS_TO_VIRT(frame), 0, PAGE_SIZE);
+        u64 vaddr = EXEC_USTACK_TOP - (u64)(EXEC_USTACK_PAGES - i) * PAGE_SIZE;
+        vmm_map_user_page(new_pml4, vaddr, frame, PTE_USER | PTE_WRITE);
+    }
+
+    /* Switch to new address space and free old */
+    p->pml4_phys = new_pml4;
+    vmm_switch_to(new_pml4);
+    if (old_pml4) vmm_destroy_user_pml4(old_pml4);
+
+    /* Allocate a fresh kernel stack for the new process image.
+     * Must be kmalloc'd so it lives in the higher-half (PML4[511], shared
+     * with every user PML4) — accessible from ring-0 interrupt handlers
+     * regardless of which user PML4 is loaded. */
+    u8 *new_kstack = (u8 *)kmalloc(KSTACK_SIZE);
+    if (!new_kstack) { vmm_destroy_user_pml4(new_pml4); return (u64)(i64)(-ENOMEM); }
+    memset(new_kstack, 0, KSTACK_SIZE);
+
+    u8 *old_kstack = p->kstack;
+    p->kstack = new_kstack;
+
+    /* Update TSS RSP0 (interrupts) and SYSCALL kernel RSP */
+    u64 new_kstack_top = (u64)new_kstack + KSTACK_SIZE;
+    gdt_set_tss_rsp0(new_kstack_top);
+    syscall_set_kernel_rsp(new_kstack_top);
+
+    /* Free old kstack AFTER we switch stacks in iretq.
+     * We can't free it now since we're still executing on it.
+     * Leak it for now — acceptable for a single execve path. */
+    (void)old_kstack;
+
+    /* iretq to new userspace entry.  We switch to the new kernel stack
+       first so interrupts after iretq use the correct RSP0. */
+    u64 usp = EXEC_USTACK_TOP;
+    u64 ucs = EXEC_SEG_USER_CODE;
+    u64 uss = EXEC_SEG_USER_DATA;
+    u64 ufl = EXEC_USER_RFLAGS;
+    __asm__ volatile (
+        "mov  %0, %%rsp\n\t"      /* switch to new kernel stack top */
+        "push %5\n\t"             /* SS  */
+        "push %1\n\t"             /* RSP (user stack top) */
+        "push %4\n\t"             /* RFLAGS */
+        "push %2\n\t"             /* CS  */
+        "push %3\n\t"             /* RIP (entry) */
+        "iretq\n\t"
+        :
+        : "r"(new_kstack_top), "r"(usp), "r"(ucs), "r"(entry), "r"(ufl), "r"(uss)
+        : "memory"
+    );
+    __builtin_unreachable();
+}
+
+/* waitpid(pid, *status, options) → pid or -1 */
+static u64 sys_waitpid(u64 pid, u64 status_ptr,
+                       u64 a2 __attribute__((unused)),
+                       u64 a3 __attribute__((unused)),
+                       u64 a4 __attribute__((unused)),
+                       u64 a5 __attribute__((unused))) {
+    i32 status = 0;
+    i32 ret = process_waitpid((u32)pid, &status);
+    if (ret < 0) return (u64)(i64)-1;
+    if (status_ptr) *(i32 *)(usize)status_ptr = status;
+    return (u64)(u32)ret;
 }
 
 /* Stubs for Phase 6 */
@@ -117,8 +247,17 @@ void syscall_register(u32 nr, u64 (*fn)(u64,u64,u64,u64,u64,u64)) {
         dispatch_table[nr] = fn;
 }
 
+/* ── syscall_set_kernel_rsp — update SYSCALL entry kernel stack ──── */
+void syscall_set_kernel_rsp(u64 rsp) {
+    syscall_kernel_rsp = rsp;
+}
+
 /* ── syscall_dispatch — called from syscall_entry.asm ────────────── */
 u64 syscall_dispatch(u64 nr, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5) {
+    /* Save user context into current process struct (for fork trampoline). */
+    process_save_user_ctx(syscall_saved_user_rip,
+                          syscall_saved_user_rsp,
+                          syscall_saved_user_rflags);
     if (nr >= SYSCALL_MAX || !dispatch_table[nr]) {
         klog(LOG_WARN, "[syscall] unhandled nr=%u", (unsigned)nr);
         return (u64)(i64)(-ENOSYS);
@@ -150,8 +289,8 @@ int syscall_init(void) {
     dispatch_table[SYS_GETPID] = sys_getpid;
     dispatch_table[SYS_EXIT]   = sys_exit;
     dispatch_table[SYS_FORK]   = sys_fork;
-    dispatch_table[SYS_EXECVE] = sys_enosys;
-    dispatch_table[SYS_WAITPID]= sys_enosys;
+    dispatch_table[SYS_EXECVE] = sys_execve;
+    dispatch_table[SYS_WAITPID]= sys_waitpid;
     dispatch_table[SYS_MMAP]   = sys_enosys;
     dispatch_table[SYS_MUNMAP] = sys_enosys;
     dispatch_table[SYS_BRK]    = sys_enosys;

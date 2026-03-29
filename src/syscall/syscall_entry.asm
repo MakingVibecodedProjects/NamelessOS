@@ -3,51 +3,99 @@
 ; On entry (AMD64 ABI for SYSCALL):
 ;   rax = syscall number
 ;   rdi, rsi, rdx, r10, r8, r9 = arguments 1-6  (r10 replaces rcx)
-;   rcx = saved user RIP  (do NOT clobber — needed by SYSRET)
-;   r11 = saved RFLAGS    (do NOT clobber — needed by SYSRET)
+;   rcx = saved user RIP  (needed by SYSRET)
+;   r11 = saved RFLAGS    (needed by SYSRET)
+;   rsp = user stack      (SYSCALL does NOT switch stacks)
 ;
-; We are still on whatever stack was active when SYSCALL fired.
-; For now (no user processes) that is already the kernel stack.
-; Phase 6 will add RSP0 swap via TSS.
+; Interrupts are disabled by SYSCALL (SFMASK clears IF).
+; We switch to the kernel stack immediately.
 ;
-; Calling convention for syscall_dispatch(u64 nr, u64 a1..a5):
+; Kernel stack frame built here:
+;   [rsp+0]  user RSP       ← pop rsp restores user stack
+;   [rsp+8]  user RIP       ← loaded into rcx for SYSRET
+;   [rsp+16] user RFLAGS    ← loaded into r11 for SYSRET
+;
+; syscall_dispatch(nr, a1, a2, a3, a4, a5) SysV:
 ;   rdi=nr  rsi=a1  rdx=a2  rcx=a3  r8=a4  r9=a5
-; But rcx is already taken by the saved RIP, so we pass a3 via r10→rcx below.
+;
+; process_save_user_ctx() is called from C (syscall_dispatch) using the
+; globals syscall_saved_user_rip/rsp/rflags written here before stack switch.
+; They are safe because IF=0 until sti, and after cli (before SYSRET) we
+; restore rcx/r11 from the kernel stack (not globals) — race-free.
 
 extern syscall_dispatch
 
+section .data
+
+; Kernel RSP for SYSCALL — set by syscall_set_kernel_rsp() whenever
+; the current process's kernel stack changes.
+global syscall_kernel_rsp
+syscall_kernel_rsp: dq 0
+
+; User context saved before stack switch.  Read by syscall_dispatch() via C.
+; Written with IF=0; read by dispatch before sti so no concurrent write possible.
+global syscall_saved_user_rip
+syscall_saved_user_rip:    dq 0
+
+global syscall_saved_user_rsp
+syscall_saved_user_rsp:    dq 0
+
+global syscall_saved_user_rflags
+syscall_saved_user_rflags: dq 0
+
+section .text
+
 global syscall_entry
 syscall_entry:
-    ; ── Save caller-saved regs that C may clobber ─────────────────
-    ; rcx and r11 must survive to SYSRET — push them now.
-    push rcx        ; saved user RIP
-    push r11        ; saved RFLAGS
+    ; ── Save user context (IF=0, single CPU) ────────────────────────
+    mov [rel syscall_saved_user_rip],    rcx
+    mov [rel syscall_saved_user_rsp],    rsp
+    mov [rel syscall_saved_user_rflags], r11
 
-    ; The syscall arguments arrive in: rdi rsi rdx r10 r8 r9
-    ; syscall_dispatch signature:  (u64 nr, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5)
-    ; Map: rdi=rax(nr), rsi=rdi(a1), rdx=rsi(a2), rcx=rdx(a3), r8=r10(a4), r9=r8(a5)
-    ; Do the shuffle before clobbering anything.
-    mov  r9,  r8     ; a5 = r8  (must move first — r9 is free)
-    mov  r8,  r10    ; a4 = r10
-    mov  rcx, rdx    ; a3 = rdx
-    mov  rdx, rsi    ; a2 = rsi
-    mov  rsi, rdi    ; a1 = rdi
-    mov  rdi, rax    ; nr = rax
+    ; ── Switch to kernel stack ───────────────────────────────────────
+    mov rsp, [rel syscall_kernel_rsp]
 
-    ; ── Re-enable interrupts now that we are on the kernel stack ──
+    ; ── Push SYSRET frame on kernel stack ───────────────────────────
+    push r11   ; user RFLAGS  → [rsp+16] (after 2 more pushes)
+    push rcx   ; user RIP     → [rsp+8]  (after 1 more push)
+    push qword [rel syscall_saved_user_rsp]  ; user RSP → [rsp+0]
+
+    ; ── Shuffle register args: syscall_dispatch(nr, a1..a5) ─────────
+    ; SysV: rdi=nr, rsi=a1, rdx=a2, rcx=a3, r8=a4, r9=a5
+    ; Have: rax=nr, rdi=a1, rsi=a2, rdx=a3, r10=a4, r8=a5
+    mov  r9,  r8     ; a5 → r9 first (r9 is scratch here)
+    mov  r8,  r10    ; a4 → r8
+    mov  rcx, rdx    ; a3 → rcx
+    mov  rdx, rsi    ; a2 → rdx
+    mov  rsi, rdi    ; a1 → rsi
+    mov  rdi, rax    ; nr → rdi
+
+    ; ── Dispatch (interrupts enabled during kernel work) ────────────
     sti
-
-    call syscall_dispatch   ; returns result in rax
-
-    ; ── Disable interrupts before SYSRET (RFLAGS restored from r11) ─
+    call syscall_dispatch   ; result in rax
     cli
 
-    ; ── Restore saved rcx/r11 for SYSRET ──────────────────────────
-    pop  r11
-    pop  rcx
+    ; ── Restore user context from kernel stack ───────────────────────
+    ; Stack: [rsp+0]=user_rsp, [rsp+8]=user_rip, [rsp+16]=user_rflags
+    ; Load rcx and r11 by offset BEFORE popping rsp (which switches stacks).
+    mov  rcx, [rsp+8]    ; user RIP
+    mov  r11, [rsp+16]   ; user RFLAGS
+    pop  rsp             ; user RSP — switch to user stack
 
-    ; SYSRET64: restores RIP from rcx, RFLAGS from r11, CS/SS from STAR
+    ; SYSRET64: RIP←rcx, RFLAGS←r11
     o64 sysret
+
+; ── fork_sysret_trampoline ───────────────────────────────────────────────
+; Called as the first instruction of a forked child process via context_switch.
+; r12/r13/r14 hold the child's user_rip/user_rflags/user_rsp (callee-saved,
+; restored by context_switch).
+global fork_sysret_trampoline
+fork_sysret_trampoline:
+    mov  rcx, r12    ; user RIP
+    mov  r11, r13    ; user RFLAGS
+    mov  rsp, r14    ; user RSP
+    xor  eax, eax    ; fork() returns 0 in child
+    o64  sysret
 
 ; Mark stack as non-executable
 section .note.GNU-stack noalloc noexec nowrite progbits

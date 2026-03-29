@@ -77,6 +77,17 @@ int devfs_register(const char *name, u32 flags, fs_ops_t *ops) {
     return 0;
 }
 
+/* ── devfs_get_node ──────────────────────────────────────────────── */
+int devfs_get_node(const char *name, vfs_node_t *out) {
+    for (u32 i = 0; i < dev_count; i++) {
+        if (strcmp(dev_table[i].name, name) == 0) {
+            /* Find the tmpfs inode by calling dev_finddir on dev_dir */
+            return dev_finddir(&dev_dir, name, out);
+        }
+    }
+    return -1;
+}
+
 /* ── devfs_dump ──────────────────────────────────────────────────── */
 static void devfs_dump(void) {
     klog(LOG_DEBUG, "[devfs] %u device(s) under /dev", (unsigned)dev_count);

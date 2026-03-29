@@ -26,6 +26,7 @@ CR0_PG        equ (1 << 31)
 CR0_PE        equ (1 << 0)
 EFER_MSR      equ 0xC0000080
 EFER_LME      equ (1 << 8)
+EFER_NXE      equ (1 << 11)   ; No-Execute Enable — required for PTE_NX (bit 63)
 
 ; ─────────────────────────────────────────────────────────────────────
 ; Multiboot2 header — must appear in first 32 KB of file
@@ -84,16 +85,24 @@ start:
     add  edi, 8
     loop .fill_id
 
-    ; ── Fill pdpt_hh[510..511]: 2 × 1 GB higher-half pages ───────
-    ; 0xFFFFFFFF80000000: PML4[511] PDPT[510] → physical 0x00000000
+    ; ── Fill pdpt_hh[508..511]: 4 × 1 GB higher-half pages ───────
+    ; 0xFFFFFFFF00000000: PML4[511] PDPT[508] → physical 0x80000000
+    ; 0xFFFFFFFF40000000: PML4[511] PDPT[509] → physical 0xC0000000  (MMIO)
+    ; 0xFFFFFFFF80000000: PML4[511] PDPT[510] → physical 0x00000000  (kernel)
     ; 0xFFFFFFFFC0000000: PML4[511] PDPT[511] → physical 0x40000000
-    mov  edi, pdpt_hh + 510 * 8
-    mov  eax, (PDPE_PRESENT | PDPE_WRITE | PDPE_1G | 0x00000000)
+    mov  edi, pdpt_hh + 508 * 8
+    mov  eax, (PDPE_PRESENT | PDPE_WRITE | PDPE_1G | 0x80000000)
     mov  [edi], eax
     mov  dword [edi + 4], 0
-    mov  eax, (PDPE_PRESENT | PDPE_WRITE | PDPE_1G | 0x40000000)
+    mov  eax, (PDPE_PRESENT | PDPE_WRITE | PDPE_1G | 0xC0000000)
     mov  [edi + 8], eax
     mov  dword [edi + 12], 0
+    mov  eax, (PDPE_PRESENT | PDPE_WRITE | PDPE_1G | 0x00000000)
+    mov  [edi + 16], eax
+    mov  dword [edi + 20], 0
+    mov  eax, (PDPE_PRESENT | PDPE_WRITE | PDPE_1G | 0x40000000)
+    mov  [edi + 24], eax
+    mov  dword [edi + 28], 0
 
     ; ── Enable PAE ────────────────────────────────────────────────
     mov  eax, cr4
@@ -107,7 +116,7 @@ start:
     ; ── Set LME in EFER ───────────────────────────────────────────
     mov  ecx, EFER_MSR
     rdmsr
-    or   eax, EFER_LME
+    or   eax, (EFER_LME | EFER_NXE)
     wrmsr
 
     ; ── Enable paging ─────────────────────────────────────────────

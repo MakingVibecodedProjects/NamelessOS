@@ -19,6 +19,14 @@ void scheduler_tick(void);
 /* Add a READY process to the run queue (called by process_fork). */
 void scheduler_add(process_t *p);
 
+/* Remove a process from the run queue (called when reaping a ZOMBIE). */
+void scheduler_remove(process_t *p);
+
+/* Flag set by scheduler_tick() when a preemptive yield is due.
+   Checked by irq_common (irq_stubs.asm) after every IRQ dispatch.
+   Must be read/written with interrupts disabled. */
+extern volatile u32 scheduler_yield_pending;
+
 /* Module descriptor — registered in module_registry after mod_process. */
 extern kernel_module_t mod_scheduler;
 

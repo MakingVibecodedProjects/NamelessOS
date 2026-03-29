@@ -12,7 +12,7 @@ static u32           fs_count = 0;
 
 /* ── File-descriptor table ───────────────────────────────────────── */
 typedef struct {
-    vfs_node_t *node;
+    vfs_node_t  node;    /* stored by value — avoids dangling pointer */
     u32         offset;
     bool        open;
 } fd_entry_t;
@@ -28,9 +28,15 @@ i32 vfs_read(vfs_node_t *node, u32 offset, u32 size, u8 *buf) {
 }
 
 i32 vfs_write(vfs_node_t *node, u32 offset, u32 size, const u8 *buf) {
-    if (!node || !node->ops || !node->ops->write) return -1;
+    if (!node || !node->ops || !node->ops->write) {
+        klog(LOG_DEBUG, "[vfs] write NULL check failed node=%x ops=%x",
+             (unsigned)(usize)node,
+             node ? (unsigned)(usize)node->ops : 0u);
+        return -1;
+    }
     vfs_node_t *target = (node->flags & VFS_MOUNTPOINT) ? node->ptr : node;
-    return target->ops->write(target, offset, size, buf);
+    i32 ret = target->ops->write(target, offset, size, buf);
+    return ret;
 }
 
 int vfs_open(vfs_node_t *node) {
@@ -124,10 +130,10 @@ int vfs_fd_open(vfs_node_t *node) {
     if (!node) return -1;
     for (int i = 0; i < VFS_MAX_FDS; i++) {
         if (!fd_table[i].open) {
-            fd_table[i].node   = node;
+            fd_table[i].node   = *node;  /* copy by value */
             fd_table[i].offset = 0;
             fd_table[i].open   = true;
-            vfs_open(node);
+            vfs_open(&fd_table[i].node);
             return i;
         }
     }
@@ -137,7 +143,7 @@ int vfs_fd_open(vfs_node_t *node) {
 i32 vfs_fd_read(int fd, u32 size, u8 *buf) {
     if (fd < 0 || fd >= VFS_MAX_FDS || !fd_table[fd].open) return -1;
     fd_entry_t *e   = &fd_table[fd];
-    i32         ret = vfs_read(e->node, e->offset, size, buf);
+    i32         ret = vfs_read(&e->node, e->offset, size, buf);
     if (ret > 0) e->offset += (u32)ret;
     return ret;
 }
@@ -145,16 +151,15 @@ i32 vfs_fd_read(int fd, u32 size, u8 *buf) {
 i32 vfs_fd_write(int fd, u32 size, const u8 *buf) {
     if (fd < 0 || fd >= VFS_MAX_FDS || !fd_table[fd].open) return -1;
     fd_entry_t *e   = &fd_table[fd];
-    i32         ret = vfs_write(e->node, e->offset, size, buf);
+    i32         ret = vfs_write(&e->node, e->offset, size, buf);
     if (ret > 0) e->offset += (u32)ret;
     return ret;
 }
 
 void vfs_fd_close(int fd) {
     if (fd < 0 || fd >= VFS_MAX_FDS || !fd_table[fd].open) return;
-    vfs_close(fd_table[fd].node);
+    vfs_close(&fd_table[fd].node);
     fd_table[fd].open   = false;
-    fd_table[fd].node   = NULL;
     fd_table[fd].offset = 0;
 }
 
@@ -174,7 +179,6 @@ int vfs_init(void) {
     vfs_root = NULL;
     for (int i = 0; i < VFS_MAX_FDS; i++) {
         fd_table[i].open   = false;
-        fd_table[i].node   = NULL;
         fd_table[i].offset = 0;
     }
     klog(LOG_INFO, "[vfs] VFS ready (max %d fs, %d fds)",

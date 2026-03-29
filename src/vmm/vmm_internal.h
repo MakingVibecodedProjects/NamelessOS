@@ -32,10 +32,12 @@
 /* ── KERNEL_VMA (must match kernel.ld and entry.asm) ────────────── */
 #define KERNEL_VMA     0xFFFFFFFF80000000ULL
 
-/* ── Convert physical ↔ virtual for identity-mapped low memory ───
-   (first 4 GB is identity mapped, so phys == virt for low addrs) */
-#define PHYS_TO_VIRT(p)  ((u64)(p))
-#define VIRT_TO_PHYS(v)  ((u64)(v))
+/* ── Convert physical ↔ virtual via the higher-half kernel window ────
+   pdpt_hh maps 0–2 GB physical → 0xFFFFFFFF80000000–0xFFFFFFFFFFFFFFFF.
+   Using KERNEL_VMA + phys keeps kernel pointers in the upper half and
+   leaves PML4[0] free for per-process user mappings. */
+#define PHYS_TO_VIRT(p)  (KERNEL_VMA + (u64)(p))
+#define VIRT_TO_PHYS(v)  ((u64)(v) - KERNEL_VMA)
 
 /* ── Page-table entry types (all are just u64) ───────────────────── */
 typedef u64 pml4e_t;

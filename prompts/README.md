@@ -41,7 +41,8 @@ links forward to the next.
 | [PROMPT_29](PROMPT_29.md) | DHCP client — obtain IP on boot | Phase 7 | done |
 | [PROMPT_30](PROMPT_30.md) | SMP — LAPIC, per-CPU gs data, spinlocks, AP trampoline | Phase 8 | done |
 | [PROMPT_31](PROMPT_31.md) | TTY — line discipline, /dev/tty0 | Phase 8 | done |
-| PROMPT_32 | Init launch — embed init ELF, iretq to PID 1 | Phase 8 | pending |
+| [PROMPT_32](PROMPT_32.md) | Init launch, scheduler stability, e1000 MMIO fix | Phase 8 | done |
+| PROMPT_33 | Dynamic linker — shared .so, PLT/GOT | Phase 8 | pending |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 

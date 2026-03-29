@@ -6,6 +6,9 @@
 #include "../vmm/vmm.h"
 #include "../scheduler/scheduler.h"
 
+/* Defined in src/syscall/syscall_entry.asm — SYSRET trampoline for fork child */
+extern void fork_sysret_trampoline(void);
+
 /* ── Process table ───────────────────────────────────────────────── */
 static process_t  proc_table[PROC_MAX];
 static process_t *current_proc = NULL;
@@ -54,9 +57,8 @@ i32 kthread_create(const char *name, void (*fn)(void)) {
     }
     p->pml4_phys = 0;   /* shares kernel address space until fork/exec */
 
-    /* Set up initial context:
-       rip = fn (entry point)
-       rsp = top of stack - 8 (16-byte aligned after call push) */
+    /* Set up initial context: rip = fn, rsp = stack_top-8.
+       context_switch does jmp to ctx.rip with rsp = ctx.rsp directly. */
     u64 stack_top = (u64)(usize)(p->kstack + KSTACK_SIZE);
     p->ctx.rip = (u64)(usize)fn;
     p->ctx.rsp = stack_top - 8;
@@ -72,6 +74,15 @@ i32 kthread_create(const char *name, void (*fn)(void)) {
     return pid;
 }
 
+/* ── process_save_user_ctx ───────────────────────────────────────── */
+void process_save_user_ctx(u64 user_rip, u64 user_rsp, u64 user_rflags) {
+    if (current_proc) {
+        current_proc->user_rip    = user_rip;
+        current_proc->user_rsp    = user_rsp;
+        current_proc->user_rflags = user_rflags;
+    }
+}
+
 /* ── process_fork ────────────────────────────────────────────────── */
 i32 process_fork(void) {
     if (!current_proc) return -1;
@@ -80,9 +91,11 @@ i32 process_fork(void) {
     if (pid < 0) return -1;
 
     process_t *child = &proc_table[pid];
-    child->pid   = (u32)pid;
-    child->state = PROC_READY;
-    child->next  = NULL;
+    child->pid         = (u32)pid;
+    child->ppid        = current_proc->pid;
+    child->exit_status = 0;
+    child->state       = PROC_READY;
+    child->next        = NULL;
     strncpy(child->name, current_proc->name, sizeof(child->name) - 1);
     child->name[sizeof(child->name) - 1] = '\0';
 
@@ -111,23 +124,75 @@ i32 process_fork(void) {
         return -1;
     }
 
-    /* Copy parent context; child returns 0 from fork */
-    child->ctx        = current_proc->ctx;
-    child->ctx.rsp    = (u64)(usize)(child->kstack + KSTACK_SIZE) - 8;
-    /* rax will be set to 0 by syscall_dispatch returning 0 to child */
+    /* Copy user-mode context so child can SYSRET back to the same point */
+    child->user_rip    = current_proc->user_rip;
+    child->user_rsp    = current_proc->user_rsp;
+    child->user_rflags = current_proc->user_rflags;
+
+    /* Build child kernel context: land at fork_sysret_trampoline with
+       user_rip/rflags/rsp in r12/r13/r14 (callee-saved → restored by
+       context_switch).  rsp starts at the top of the fresh kstack. */
+    u64 kstack_top = (u64)(usize)(child->kstack + KSTACK_SIZE);
+    child->ctx.rip = (u64)(usize)fork_sysret_trampoline;
+    child->ctx.rsp = kstack_top - 8;
+    child->ctx.rbx = 0;
+    child->ctx.rbp = 0;
+    child->ctx.r12 = current_proc->user_rip;
+    child->ctx.r13 = current_proc->user_rflags;
+    child->ctx.r14 = current_proc->user_rsp;
+    child->ctx.r15 = 0;
 
     scheduler_add(child);
 
-    klog(LOG_DEBUG, "[process] forked pid=%u → child pid=%u",
-         (unsigned)current_proc->pid, (unsigned)pid);
+    klog(LOG_DEBUG, "[process] forked pid=%u → child pid=%u rip=0x%x rsp=0x%x rflags=0x%x",
+         (unsigned)current_proc->pid, (unsigned)pid,
+         (unsigned)child->ctx.r12, (unsigned)child->ctx.r14,
+         (unsigned)child->ctx.r13);
     return pid;
 }
 
 void process_exit(void) {
     if (current_proc)
         current_proc->state = PROC_ZOMBIE;
-    /* Scheduler will pick the next READY process; for now just halt */
+    /* Yield — scheduler will skip ZOMBIE and pick the next READY process */
+    scheduler_yield();
+    /* Should not be reached — scheduler won't reschedule a ZOMBIE */
     for (;;) __asm__ volatile ("hlt");
+}
+
+/* ── process_waitpid ─────────────────────────────────────────────── */
+i32 process_waitpid(u32 pid, i32 *status) {
+    /* Busy-wait (spinning yield) until the child becomes ZOMBIE.
+       This is a simple implementation — a real kernel would block. */
+    process_t *child = NULL;
+    if (pid >= PROC_MAX) {
+        klog(LOG_DEBUG, "[process] waitpid: pid %u >= PROC_MAX", (unsigned)pid);
+        return -1;
+    }
+    child = &proc_table[pid];
+    if (child->state == PROC_UNUSED) {
+        klog(LOG_DEBUG, "[process] waitpid: pid %u UNUSED", (unsigned)pid);
+        return -1;
+    }
+    if (child->ppid != current_proc->pid) {
+        klog(LOG_DEBUG, "[process] waitpid: pid %u ppid=%u != cur=%u",
+             (unsigned)pid, (unsigned)child->ppid,
+             current_proc ? (unsigned)current_proc->pid : 99u);
+        return -1;
+    }
+
+    klog(LOG_DEBUG, "[process] waitpid: waiting for pid %u state=%u", (unsigned)pid, (unsigned)child->state);
+    /* Spin until child exits */
+    while (child->state != PROC_ZOMBIE)
+        scheduler_yield();
+
+    /* Collect exit status and reap — remove from run queue first so the
+       slot can be safely reused without the old circular-list node
+       remaining linked in the queue. */
+    scheduler_remove(child);
+    if (status) *status = child->exit_status;
+    child->state = PROC_UNUSED;
+    return (i32)pid;
 }
 
 /* ── process_dump ────────────────────────────────────────────────── */
@@ -150,15 +215,16 @@ int process_init(void) {
     for (u32 i = 0; i < PROC_MAX; i++)
         proc_table[i].state = PROC_UNUSED;
 
-    /* pid 0 = idle (current boot context, no kstack allocation needed) */
+    /* pid 0 = idle.  ctx is zeroed — kernel_main calls scheduler_yield()
+       which saves idle's actual boot-stack RSP/RIP into ctx on first switch. */
     process_t *idle = &proc_table[0];
-    idle->pid   = 0;
-    idle->state = PROC_RUNNING;
-    idle->kstack = NULL;   /* boot stack, not kmalloc'd */
-    idle->next  = NULL;
+    idle->pid    = 0;
+    idle->state  = PROC_RUNNING;
+    idle->next   = NULL;
+    idle->kstack = NULL;   /* idle runs on the boot stack */
+    idle->pml4_phys = 0;
     strncpy(idle->name, "idle", sizeof(idle->name) - 1);
 
-    idle->pml4_phys = 0;   /* boot address space */
     current_proc = idle;
 
     klog(LOG_INFO, "[process] process subsystem ready, idle pid=0");

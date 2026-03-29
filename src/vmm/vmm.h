@@ -44,6 +44,12 @@ u64  vmm_fork_pml4(u64 src_pml4_phys);
    and the PML4 frame.  Kernel half entries are not freed. */
 void vmm_destroy_user_pml4(u64 pml4_phys);
 
+/* Map a kernel (ring-0 only) page into a user process's PML4 at the given
+   virtual address.  No PTE_USER is set on any level — the page is invisible
+   to user code but accessible to the kernel (e.g. for kernel stacks).
+   Used to make kstacks accessible when CR3 is the user PML4. */
+int  vmm_map_kernel_in_user_pml4(u64 pml4_phys, u64 virt, u64 phys, u64 flags);
+
 /* Load a PML4 into CR3 (flush TLB). */
 void vmm_switch_to(u64 pml4_phys);
 

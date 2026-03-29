@@ -88,6 +88,11 @@ static void gdt_load(void) {
     __asm__ volatile ("ltr %%ax" : : "a"((u16)SEG_TSS));
 }
 
+/* ── gdt_set_tss_rsp0 ─────────────────────────────────────────────── */
+void gdt_set_tss_rsp0(u64 rsp0) {
+    tss.rsp0 = rsp0;
+}
+
 /* ── gdt_dump ─────────────────────────────────────────────────────── */
 static void gdt_dump(void) {
     klog(LOG_DEBUG, "[gdt] base=0x%x limit=%u TSS base=0x%x",

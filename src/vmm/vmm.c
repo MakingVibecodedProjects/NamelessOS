@@ -28,6 +28,9 @@ static inline void invlpg(u64 virt) {
 /* ── Active PML4 physical address ───────────────────────────────── */
 static u64 pml4_phys;
 
+/* ── Kernel (boot) PML4 physical address — exported if needed ── */
+u64 kernel_pml4_phys = 0;
+
 /* ── get_or_alloc_table ──────────────────────────────────────────────
  * Given a pointer to a page-table entry at the current level,
  * return the VA of the next-level table.  If the entry is not present,
@@ -131,6 +134,7 @@ u64 vmm_create_user_pml4(void) {
     for (u32 i = 0; i < 256; i++)
         dst[i] = src[i];
 
+
     return frame;
 }
 
@@ -153,6 +157,29 @@ int vmm_map_user_page(u64 target_pml4_phys, u64 virt, u64 phys, u64 flags) {
     pt[VA_PT_IDX(virt)] = (phys & PTE_ADDR_MASK) | flags | PTE_PRESENT;
 
     /* Flush TLB only if we're currently running with this address space */
+    if ((read_cr3() & PTE_ADDR_MASK) == target_pml4_phys)
+        invlpg(virt);
+
+    return 0;
+}
+
+/* ── vmm_map_kernel_in_user_pml4 ─────────────────────────────────────
+ * Like vmm_map_user_page but without PTE_USER on any level.
+ * Used to make kernel stacks accessible from user process address spaces. */
+int vmm_map_kernel_in_user_pml4(u64 target_pml4_phys, u64 virt, u64 phys, u64 flags) {
+    u64 *pml4 = (u64 *)PHYS_TO_VIRT(target_pml4_phys);
+
+    u64 *pdpt = get_or_alloc_table(&pml4[VA_PML4_IDX(virt)], PTE_WRITE);
+    if (!pdpt) return -1;
+
+    u64 *pdt  = get_or_alloc_table(&pdpt[VA_PDPT_IDX(virt)], PTE_WRITE);
+    if (!pdt)  return -1;
+
+    u64 *pt   = get_or_alloc_table(&pdt[VA_PDT_IDX(virt)], PTE_WRITE);
+    if (!pt)   return -1;
+
+    pt[VA_PT_IDX(virt)] = (phys & PTE_ADDR_MASK) | flags | PTE_PRESENT;
+
     if ((read_cr3() & PTE_ADDR_MASK) == target_pml4_phys)
         invlpg(virt);
 
@@ -238,7 +265,7 @@ u64 vmm_fork_pml4(u64 src_pml4_phys) {
     for (u32 i = 0; i < 256; i++)
         kd[i] = ks[i];
 
-    /* User half: COW-clone each present PDPT */
+    /* User half (indices 0..255): COW-clone each present PDPT */
     for (u32 i = 0; i < 256; i++) {
         u64 e = src_pml4[i];
         if (!(e & PTE_PRESENT)) { dst_pml4[i] = 0; continue; }
@@ -321,8 +348,6 @@ static int cow_handle(u64 cr2) {
     *pte = (*pte & ~(PTE_ADDR_MASK | PTE_COW)) | new_phys | PTE_WRITE;
     invlpg(cr2 & PAGE_MASK);
 
-    klog(LOG_DEBUG, "[vmm] COW resolved va=0x%x old=0x%x new=0x%x",
-         (unsigned)cr2, (unsigned)old_phys, (unsigned)new_phys);
     return 1;
 }
 
@@ -357,20 +382,44 @@ void page_fault_handler_c(u64 err, u64 rip,
 __attribute__((naked))
 static void pf_stub(void) {
     __asm__ volatile (
-        /* Stack on entry (top → bottom):
-           [rsp+0]  error_code   ← pushed by CPU
-           [rsp+8]  rip
-           [rsp+16] cs
-           [rsp+24] rflags
-           [rsp+32] rsp_at_fault */
-        "mov  0(%rsp),  %rdi\n\t"   /* err    */
-        "mov  8(%rsp),  %rsi\n\t"   /* rip    */
-        "mov  16(%rsp), %rdx\n\t"   /* cs     */
-        "mov  24(%rsp), %rcx\n\t"   /* rflags */
-        "mov  32(%rsp), %r8\n\t"    /* rsp    */
-        "sub  $8,       %rsp\n\t"   /* align  */
+        /* Save all caller-saved GP registers so the C handler cannot corrupt them.
+           CPU pushed (ring-3 entry, from top): error_code, rip, cs, rflags, rsp, ss.
+           After 9 pushes the iretq frame is at [rsp+72..]. */
+        "push %rax\n\t"
+        "push %rcx\n\t"
+        "push %rdx\n\t"
+        "push %rsi\n\t"
+        "push %rdi\n\t"
+        "push %r8\n\t"
+        "push %r9\n\t"
+        "push %r10\n\t"
+        "push %r11\n\t"
+        /* iretq frame offsets from new rsp:
+           [rsp+72]  error_code
+           [rsp+80]  rip
+           [rsp+88]  cs
+           [rsp+96]  rflags
+           [rsp+104] user rsp
+           [rsp+112] ss */
+        "mov  72(%rsp), %rdi\n\t"   /* err    */
+        "mov  80(%rsp), %rsi\n\t"   /* rip    */
+        "mov  88(%rsp), %rdx\n\t"   /* cs     */
+        "mov  96(%rsp), %rcx\n\t"   /* rflags */
+        "mov  104(%rsp),%r8\n\t"    /* user rsp */
+        "sub  $8,       %rsp\n\t"   /* align to 16 bytes */
         "call page_fault_handler_c\n\t"
-        "add  $8,       %rsp\n\t"
+        "add  $8,       %rsp\n\t"   /* remove alignment pad */
+        /* Restore GP registers in reverse push order */
+        "pop  %r11\n\t"
+        "pop  %r10\n\t"
+        "pop  %r9\n\t"
+        "pop  %r8\n\t"
+        "pop  %rdi\n\t"
+        "pop  %rsi\n\t"
+        "pop  %rdx\n\t"
+        "pop  %rcx\n\t"
+        "pop  %rax\n\t"
+        "add  $8,       %rsp\n\t"   /* skip error_code */
         "iretq\n\t"
     );
 }
@@ -384,6 +433,7 @@ static void vmm_dump(void) {
 int vmm_init(void) {
     /* Grab physical address of the boot PML4 from CR3 */
     pml4_phys = read_cr3() & PTE_ADDR_MASK;
+    kernel_pml4_phys = pml4_phys;
 
     /* Install our own page fault handler (replaces the generic one) */
     idt_set_gate(14, (void *)pf_stub, 0);

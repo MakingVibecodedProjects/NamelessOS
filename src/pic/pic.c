@@ -53,9 +53,13 @@ void irq_register(u8 irq, void (*handler)(void)) {
 
 /* ── irq_dispatch — called from irq_stubs.asm ───────────────────── */
 void irq_dispatch(u8 irq) {
+    /* Send EOI before calling the handler so the PIC can accept
+       further interrupts even if the handler does a context switch
+       (e.g. scheduler_yield → context_switch → sysret) and never
+       returns to this call site. */
+    pic_eoi(irq);
     if (irq < IRQ_COUNT && irq_handlers[irq])
         irq_handlers[irq]();
-    pic_eoi(irq);
 }
 
 /* ── pic_dump ────────────────────────────────────────────────────── */

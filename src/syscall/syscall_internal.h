@@ -34,6 +34,10 @@
 #define ENOSYS          38    /* Function not implemented */
 #define EBADF           9     /* Bad file descriptor       */
 #define EINVAL          22    /* Invalid argument          */
+#define ENOENT          2     /* No such file or directory */
+#define ENOMEM          12    /* Out of memory             */
+#define ESRCH           3     /* No such process           */
+#define ENOEXEC         8     /* Exec format error         */
 
 /* ── Dispatch table size ─────────────────────────────────────────── */
 #define SYSCALL_MAX     320u  /* covers all numbers used above */

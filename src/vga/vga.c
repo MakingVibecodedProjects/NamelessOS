@@ -1,6 +1,7 @@
 #include "vga.h"
 #include "../lib/string.h"
 #include "../serial/serial.h"
+#include "../vmm/vmm_internal.h"   /* PHYS_TO_VIRT — access via higher-half window */
 
 /* ── VGA text mode constants ─────────────────────────────────────── */
 #define VGA_COLS         80
@@ -8,8 +9,9 @@
 #define VGA_BUF_PHYS     0xB8000ULL
 #define VGA_DEFAULT_ATTR 0x07   /* White on black */
 
-/* Identity-mapped, so physical address is directly accessible. */
-static volatile u16 *const vga_buf = (volatile u16 *)VGA_BUF_PHYS;
+/* Accessed via higher-half window so it works regardless of which
+   user PML4 is loaded (PML4[511] is always shared from the boot PML4). */
+static volatile u16 *const vga_buf = (volatile u16 *)PHYS_TO_VIRT(VGA_BUF_PHYS);
 
 static int vga_col = 0;
 static int vga_row = 0;

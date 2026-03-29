@@ -8,6 +8,7 @@
 #include "../serial/serial.h"
 #include "../lib/string.h"
 #include "../lib/types.h"
+#include "../scheduler/scheduler.h"
 
 /* ── Cooked-mode line buffer ────────────────────────────────────────── */
 /* Accumulates raw keystrokes; flushes to read ring on '\n'.            */
@@ -92,10 +93,8 @@ static i32 tty_read(vfs_node_t *node, u32 offset, u32 size, u8 *buf) {
             if ((char)ch == '\n') break;
             continue;
         }
-        /* Poll keyboard until we have at least one byte */
-        tty_poll();
-        if (rbuf_avail() == 0)
-            break;   /* still nothing — return what we have (non-blocking) */
+        /* Yield — timer callback (tty_poll) fills rbuf on next tick */
+        scheduler_yield();
     }
     return (i32)n;
 }

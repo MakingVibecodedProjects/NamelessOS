@@ -160,11 +160,12 @@ static int e1000_init_impl(void) {
          pci->bus, pci->slot, pci->func, pci->bar[0]);
 
     /* BAR0 is the MMIO base (strip the low 4 bits which are flags).
-       The boot page tables cover the first 4 GB via 1 GB identity pages,
-       so the MMIO region (typically 0xfeb80000 on QEMU) is already
-       accessible — no additional vmm_map_page calls needed. */
+       Physical range 0xC0000000–0xFFFFFFFF is mapped in the kernel higher-half
+       at VA 0xFFFFFFFF40000000 + (phys - 0xC0000000), accessible from any PML4
+       via the shared PML4[511] entry. */
     u64 mmio_phys = (u64)(pci->bar[0] & ~0xFu);
-    dev.mmio = (volatile u8 *)mmio_phys;
+    u64 mmio_va   = 0xFFFFFFFF40000000ULL + (mmio_phys - 0xC0000000ULL);
+    dev.mmio = (volatile u8 *)mmio_va;
 
     /* Enable PCI Bus Master so the NIC can DMA */
     u32 cmd = pci_read32(pci, 0x04);

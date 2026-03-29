@@ -4,6 +4,7 @@
 #include "../serial/serial.h"
 #include "../pmm/pmm.h"
 #include "../vmm/vmm.h"
+#include "../vmm/vmm_internal.h"  /* PHYS_TO_VIRT / VIRT_TO_PHYS */
 
 /* ── Cache table — one entry per power-of-two size class ─────────── */
 static slab_cache_t caches[HEAP_NUM_CACHES];
@@ -30,8 +31,8 @@ static slab_t *slab_create(u32 obj_size) {
     u64 frame = pmm_alloc_frame();
     if (!frame) return NULL;
 
-    /* Map the frame into kernel virtual space (identity mapped for now) */
-    slab_t *slab = (slab_t *)frame;
+    /* Map the frame into kernel virtual space via the higher-half window */
+    slab_t *slab = (slab_t *)PHYS_TO_VIRT(frame);
     memset(slab, 0, SLAB_SIZE);
 
     /* Descriptor lives at the start; first object follows it.
@@ -121,7 +122,7 @@ static void cache_free(slab_cache_t *cache, void *ptr) {
         slab_t **p = &cache->partial;
         while (*p && *p != slab) p = &(*p)->next;
         if (*p) *p = slab->next;
-        pmm_free_frame((u64)slab);
+        pmm_free_frame(VIRT_TO_PHYS((u64)slab));
     }
 }
 
@@ -138,9 +139,9 @@ static void *large_alloc(usize size) {
         if (i == 0) first = frame;
     }
 
-    large_hdr_t *hdr = (large_hdr_t *)first;
+    large_hdr_t *hdr = (large_hdr_t *)PHYS_TO_VIRT(first);
     hdr->num_pages   = num_pages;
-    return (void *)(first + sizeof(large_hdr_t));
+    return (void *)((u64)hdr + sizeof(large_hdr_t));
 }
 
 static void large_free(void *ptr) {
@@ -148,7 +149,7 @@ static void large_free(void *ptr) {
     /* Frames were allocated as separate PMM frames; free first page only
        (single-page large allocs are the common case; multi-page frees
        require tracking — left as a known limitation for now). */
-    pmm_free_frame((u64)hdr);
+    pmm_free_frame(VIRT_TO_PHYS((u64)hdr));
 }
 
 /* ── Public API ──────────────────────────────────────────────────── */

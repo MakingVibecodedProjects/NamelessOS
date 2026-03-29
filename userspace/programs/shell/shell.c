@@ -78,7 +78,7 @@ int main(void) {
     char line[LINE_MAX];
     char *argv[ARG_MAX];
 
-    printf("NamelessOS shell — type 'exit' to quit\n");
+    printf("NamelessOS shell - type 'exit' to quit\n");
 
     for (;;) {
         write(STDOUT_FILENO, "$ ", 2);
