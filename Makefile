@@ -5,7 +5,7 @@ AS      := nasm
 LD      := x86_64-linux-gnu-ld
 
 CFLAGS  := -ffreestanding -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel \
-           -fno-pic -fno-pie \
+           -fno-pic -fno-pie -mno-sse -mno-sse2 -mno-avx \
            -O2 -Wall -Wextra -std=c11 -I src
 
 ASFLAGS := -f elf64
