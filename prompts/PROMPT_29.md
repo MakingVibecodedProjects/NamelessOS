@@ -1,4 +1,4 @@
-[← 28](PROMPT_28.md) | [index](README.md) | **29** | 30 →
+[← 28](PROMPT_28.md) | [index](README.md) | **29** | [30 →](PROMPT_30.md)
 
 ---
 
@@ -70,8 +70,8 @@ The DHCP module was written and compiled cleanly but received no OFFER. The inve
 
 ## Next session
 
-30 → — Phase 8 Step 1: `src/smp/` — APIC SIPI, per-CPU data (gs-based), spinlocks
+[PROMPT_30 →](PROMPT_30.md) — Phase 8 Step 1: `src/smp/` — APIC SIPI, per-CPU data (gs-based), spinlocks
 
 ---
 
-[← 28](PROMPT_28.md) | [index](README.md) | **29** | 30 →
+[← 28](PROMPT_28.md) | [index](README.md) | **29** | [30 →](PROMPT_30.md)

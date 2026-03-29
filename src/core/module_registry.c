@@ -27,6 +27,7 @@
 #include "../net/tcp/tcp.h"
 #include "../net/socket/socket.h"
 #include "../net/dhcp/dhcp.h"
+#include "../smp/smp.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
@@ -58,6 +59,7 @@ static kernel_module_t *modules[] = {
     &mod_tcp,
     &mod_socket,
     &mod_dhcp,
+    &mod_smp,
 };
 
 #define MODULE_COUNT ((int)(sizeof(modules) / sizeof(modules[0])))

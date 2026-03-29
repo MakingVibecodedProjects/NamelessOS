@@ -37,7 +37,8 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 7 | TCP (state machine, sliding window, retransmit) | done |
 | 7 | Socket (BSD socket syscalls over TCP/UDP) | done |
 | 7 | DHCP client (obtains IP 10.0.2.15 from QEMU SLIRP on boot) | done |
-| 8 | SMP, TTY, HTTP server | pending |
+| 8 | SMP — LAPIC, per-CPU gs data, spinlocks, AP trampoline | done |
+| 8 | TTY, dynamic linker, HTTP server | pending |
 
 ## Roadmap
 

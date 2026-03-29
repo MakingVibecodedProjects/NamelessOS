@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 7 Step 9 — `src/net/dhcp/` (DHCP client; obtains IP `10.0.2.15` from QEMU SLIRP on boot)
-- **Next task:** Phase 8 Step 1 — `src/smp/` (APIC SIPI, per-CPU data gs-based, spinlocks)
+- **Last completed:** Phase 8 Step 1 — `src/smp/` (LAPIC enable, per-CPU gs-based data, spinlocks, AP trampoline; AP boot gated on ACPI MADT)
+- **Next task:** Phase 8 Step 2 — `src/tty/` (line discipline, /dev/tty0)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
@@ -88,7 +88,7 @@ Module registration order in `src/core/module_registry.c` must match this graph.
 23. `userspace/programs/init` — PID 1
 24. `userspace/programs/shell` — cd ls cat exec
 
-### Phase 7 — Networking ← current
+### Phase 7 — Networking ✓
 25. `src/net/e1000/` — Intel e1000, PCI detect, DMA TX/RX rings
 26. `src/net/ethernet/` — frame parse/build, ethertype dispatch
 27. `src/net/arp/` — request/reply, ARP table
@@ -99,7 +99,7 @@ Module registration order in `src/core/module_registry.c` must match this graph.
 32. `src/net/socket/` — BSD socket syscalls
 33. `src/net/dhcp/` — DHCP client, obtain IP on boot
 
-### Phase 8 — Advanced
+### Phase 8 — Advanced ← current
 34. `src/smp/` — APIC SIPI, per-CPU data (gs-based), spinlocks
 35. `src/tty/` — line discipline, `/dev/tty0`
 36. `src/dynlink/` — shared `.so`, PLT/GOT
@@ -204,6 +204,7 @@ A module is only "complete" when ALL of these pass:
 - **e1000 MMIO at `0xfeb80000` needs NO `vmm_map_page`** — that address falls in the boot 4th 1GB identity page (`pdpt_id[3]`, covers 0xC0000000–0xFFFFFFFF); calling `vmm_map_page` with a huge-page-covered VA tries to walk 4KB page tables through a 1GB PS entry and corrupts memory; just use the physical address as the VA directly
 - **QEMU e1000 EERD may not respond** — the 82540EM emulation doesn't always complete EEPROM reads; fall back to reading MAC from RAL0/RAH0, which QEMU populates at virtual NIC init time (typically `52:54:00:12:34:56`)
 - **Bus-master must be enabled before DMA** — set bit 2 of PCI Command register via `pci_write32(pci, 0x04, cmd | (1 << 2))` before programming RDBAL/TDBAL; without it the NIC cannot DMA and all TX descriptors stay busy
+- **QEMU with `-smp N` and SeaBIOS boots APs from the full reset vector, not SIPI** — without ACPI MADT tables, SeaBIOS re-runs POST and GRUB for each AP; this makes the kernel boot N times and corrupts everything; `send_init_sipi` is correct but useless without MADT-based AP enumeration; must implement ACPI MADT parser before enabling AP boot
 - **UDP (and IP) checksum must use native u16 reads, not explicit big-endian byte access** — `buf[0]<<8 | buf[1]` produces a different one's-complement sum than `__builtin_memcpy(&w, buf, 2); sum += w` on little-endian x86; SLIRP's `cksum.c` uses native `*w++` reads, so any kernel code using big-endian byte access generates checksums that SLIRP silently rejects; burned an entire DHCP debugging session tracking this down
 
 ### Git / GitHub
