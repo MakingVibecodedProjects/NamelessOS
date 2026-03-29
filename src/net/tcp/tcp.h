@@ -45,6 +45,17 @@ int tcp_close(tcp_conn_id_t id);
    retransmit timeouts and TIME_WAIT expiry. */
 void tcp_tick(void);
 
+/* Poll for a newly ESTABLISHED connection on listen_port.
+   Returns a conn_id if one is found, -1 if none ready. */
+tcp_conn_id_t tcp_accept(u16 listen_port);
+
+/* Copy up to len bytes from the connection's receive buffer into buf.
+   Returns number of bytes copied (0 if none available). */
+u16 tcp_read(tcp_conn_id_t id, u8 *buf, u16 len);
+
+/* Fill *ip and *port with the remote address of an ESTABLISHED connection. */
+void tcp_get_peer(tcp_conn_id_t id, u32 *ip, u16 *port);
+
 /* Module descriptor — registered in module_registry. */
 extern kernel_module_t mod_tcp;
 

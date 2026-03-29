@@ -111,6 +111,12 @@ static u64 sys_enosys(u64 a0 __attribute__((unused)),
     return (u64)(i64)(-ENOSYS);
 }
 
+/* ── syscall_register — called by other modules after init ───────── */
+void syscall_register(u32 nr, u64 (*fn)(u64,u64,u64,u64,u64,u64)) {
+    if (nr < SYSCALL_MAX)
+        dispatch_table[nr] = fn;
+}
+
 /* ── syscall_dispatch — called from syscall_entry.asm ────────────── */
 u64 syscall_dispatch(u64 nr, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5) {
     if (nr >= SYSCALL_MAX || !dispatch_table[nr]) {

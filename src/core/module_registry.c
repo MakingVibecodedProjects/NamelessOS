@@ -25,6 +25,7 @@
 #include "../net/icmp/icmp.h"
 #include "../net/udp/udp.h"
 #include "../net/tcp/tcp.h"
+#include "../net/socket/socket.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
@@ -54,6 +55,7 @@ static kernel_module_t *modules[] = {
     &mod_icmp,
     &mod_udp,
     &mod_tcp,
+    &mod_socket,
 };
 
 #define MODULE_COUNT ((int)(sizeof(modules) / sizeof(modules[0])))

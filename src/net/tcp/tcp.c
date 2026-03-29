@@ -516,6 +516,44 @@ void tcp_tick(void) {
     }
 }
 
+/* ── tcp_accept ──────────────────────────────────────────────────────── */
+tcp_conn_id_t tcp_accept(u16 listen_port) {
+    for (int i = 0; i < TCP_MAX_CONN; i++) {
+        tcp_conn_t *c = &conns[i];
+        if (c->state    == TCP_ESTABLISHED &&
+            c->local_port == listen_port   &&
+            c->remote_port != 0) {
+            /* Mark as "claimed" by setting on_data to NULL so we don't
+               re-accept it on the next call */
+            c->on_data = (void *)0;
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* ── tcp_read ────────────────────────────────────────────────────────── */
+u16 tcp_read(tcp_conn_id_t id, u8 *buf, u16 len) {
+    if (id < 0 || id >= TCP_MAX_CONN) return 0;
+    tcp_conn_t *c = &conns[id];
+    u16 avail = (u16)((c->rx_tail - c->rx_head + TCP_RX_BUF_SIZE)
+                       % TCP_RX_BUF_SIZE);
+    if (avail == 0) return 0;
+    u16 n = (u16)(avail < len ? avail : len);
+    for (u16 i = 0; i < n; i++) {
+        buf[i]    = c->rx_buf[c->rx_head];
+        c->rx_head = (u16)((c->rx_head + 1) % TCP_RX_BUF_SIZE);
+    }
+    return n;
+}
+
+/* ── tcp_get_peer ────────────────────────────────────────────────────── */
+void tcp_get_peer(tcp_conn_id_t id, u32 *ip, u16 *port) {
+    if (id < 0 || id >= TCP_MAX_CONN) { *ip = 0; *port = 0; return; }
+    *ip   = conns[id].remote_ip;
+    *port = conns[id].remote_port;
+}
+
 /* ── Module init / dump ──────────────────────────────────────────────── */
 static int tcp_init_impl(void) {
     for (int i = 0; i < TCP_MAX_CONN; i++)
