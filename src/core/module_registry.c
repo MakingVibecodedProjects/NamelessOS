@@ -5,6 +5,7 @@
 #include "../idt/idt.h"
 #include "../pic/pic.h"
 #include "../pmm/pmm.h"
+#include "../vmm/vmm.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
@@ -14,6 +15,7 @@ static kernel_module_t *modules[] = {
     &mod_idt,
     &mod_pic,
     &mod_pmm,
+    &mod_vmm,
 };
 
 #define MODULE_COUNT ((int)(sizeof(modules) / sizeof(modules[0])))
