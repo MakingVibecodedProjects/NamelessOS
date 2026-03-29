@@ -6,6 +6,15 @@
 #include "../pic/pic.h"
 #include "../pmm/pmm.h"
 #include "../vmm/vmm.h"
+#include "../heap/heap.h"
+#include "../timer/timer.h"
+#include "../keyboard/keyboard.h"
+#include "../pci/pci.h"
+#include "../ata/ata.h"
+#include "../vfs/vfs.h"
+#include "../tmpfs/tmpfs.h"
+#include "../devfs/devfs.h"
+#include "../process/process.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
@@ -16,6 +25,15 @@ static kernel_module_t *modules[] = {
     &mod_pic,
     &mod_pmm,
     &mod_vmm,
+    &mod_heap,
+    &mod_timer,
+    &mod_keyboard,
+    &mod_pci,
+    &mod_ata,
+    &mod_vfs,
+    &mod_tmpfs,
+    &mod_devfs,
+    &mod_process,
 };
 
 #define MODULE_COUNT ((int)(sizeof(modules) / sizeof(modules[0])))
