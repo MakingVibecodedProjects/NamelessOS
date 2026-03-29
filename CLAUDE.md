@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 5 Step 1 — `src/process/` (TCB, 64-slot table, `kthread_create`, idle pid=0, `cpu_context_t`)
-- **Next task:** Phase 5 Step 2 — `src/scheduler/` (preemptive round-robin, `context_switch` asm, timer-driven tick)
+- **Last completed:** Phase 5 Step 2 — `src/scheduler/` (preemptive round-robin, `context_switch` asm, timer-driven tick)
+- **Next task:** Phase 5 Step 3 — `src/syscall/` (SYSCALL/SYSRET dispatch, read/write/open/close/exit/getpid/fork/execve/waitpid/mmap/munmap/brk)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
@@ -161,6 +161,7 @@ A module is only "complete" when ALL of these pass:
 - **`kprintf` has no width padding** — `%02x` silently prints wrong output; use plain `%x`
 - **Zero warnings is a hard rule** — `__attribute__((unused))` is acceptable for intentionally-unused static helpers (e.g. `tmpfs_create`); never suppress real warnings with casts
 - **`find src/ -name "*.asm"` is picked up automatically** — the Makefile glob catches all `.asm` under `src/`; no manual rule needed for new modules
+- **`.note.GNU-stack` must go at the END of NASM `.asm` files** — placing `section .note.GNU-stack` before `global` causes the linker to put the symbol inside that section and then discard it, breaking the link; always append it after all code
 
 ### QEMU / hardware
 - **QEMU disk layout** — `-cdrom` ISO takes primary master (0x1F0); ATA disk must go on secondary (0x170) via `index=1`; probe both channels in the driver

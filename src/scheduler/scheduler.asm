@@ -44,3 +44,6 @@ context_switch:
     ; The 8-byte gap at stack_top-8 holds a zero (set in kthread_create),
     ; so if the thread function ever returns, it pops 0 and faults cleanly.
     jmp  qword [rsi + 56]
+
+; Mark stack as non-executable (suppresses GNU-stack linker warning)
+section .note.GNU-stack noalloc noexec nowrite progbits

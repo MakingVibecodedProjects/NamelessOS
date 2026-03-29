@@ -24,7 +24,7 @@ links forward to the next.
 | [PROMPT_12](PROMPT_12.md) | tmpfs — in-memory filesystem | Phase 4 | done |
 | [PROMPT_13](PROMPT_13.md) | devfs — /dev/null, /dev/zero | Phase 4 | done |
 | [PROMPT_14](PROMPT_14.md) | Process — TCB, kthread_create, idle pid=0 | Phase 5 | done |
-| PROMPT_15 | Scheduler — round-robin, context_switch | Phase 5 | in progress |
+| [PROMPT_15](PROMPT_15.md) | Scheduler — round-robin, context_switch | Phase 5 | done |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 

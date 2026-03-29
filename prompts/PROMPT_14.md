@@ -1,4 +1,4 @@
-[← 13](PROMPT_13.md) | [index](README.md) | **14** | 15 →
+[← 13](PROMPT_13.md) | [index](README.md) | **14** | [15 →](PROMPT_15.md)
 
 ---
 
@@ -33,4 +33,4 @@ PROMPT_15 — Scheduler: preemptive round-robin, context_switch asm, timer-drive
 
 ---
 
-[← 13](PROMPT_13.md) | [index](README.md) | **14** | 15 →
+[← 13](PROMPT_13.md) | [index](README.md) | **14** | [15 →](PROMPT_15.md)
