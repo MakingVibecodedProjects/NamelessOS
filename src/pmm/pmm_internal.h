@@ -69,8 +69,9 @@ typedef struct {
 
 #define MB2_MMAP_AVAILABLE 1
 
-/* ── Kernel image boundaries (provided by linker) ───────────────── */
-extern u8 __kernel_start[];   /* lowest VA of kernel image */
-extern u8 __kernel_end[];     /* one byte past last VA     */
+/* ── Kernel image end boundary (provided by linker) ─────────────── */
+/* Physical layout starts at KERNEL_PHYS (0x100000) and ends at the VA
+   of __kernel_end mapped back to physical via − KERNEL_VMA. */
+extern u8 __kernel_end[];     /* one byte past last VA of kernel image */
 
 #endif /* PMM_INTERNAL_H */

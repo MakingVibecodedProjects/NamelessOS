@@ -97,10 +97,14 @@ int pmm_init(void) {
     bitmap_set(pmm.bitmap, 0);
     if (pmm.free_frames > 0) pmm.free_frames--;
 
-    /* Re-mark the kernel image as used (convert VA → PA) */
-    u64 kstart_phys = (u64)__kernel_start - KERNEL_VMA;
-    u64 kend_phys   = (u64)__kernel_end   - KERNEL_VMA;
-    mark_range_used(kstart_phys, kend_phys - kstart_phys);
+    /* Re-mark the entire kernel load area as used.
+       The physical layout starts at 0x100000 (KERNEL_PHYS): the .boot
+       section with entry code and page tables lives there, followed by
+       the higher-half kernel image (.text/.data/.bss).  We must cover
+       the whole range 0x100000 → __kernel_end − KERNEL_VMA so the slab
+       allocator never recycles frames that hold our page tables. */
+    u64 kend_phys   = (u64)__kernel_end - KERNEL_VMA;
+    mark_range_used(0x100000ULL, kend_phys - 0x100000ULL);
 
     /* Re-mark the bitmap itself as used (it's inside the kernel image,
        so already covered — but guard explicitly) */
