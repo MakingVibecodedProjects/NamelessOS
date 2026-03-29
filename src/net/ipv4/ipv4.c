@@ -108,7 +108,11 @@ int ipv4_send(u32 dst_ip, u8 proto, const u8 *payload, u16 len) {
     }
 
     u8 dst_mac[6];
-    if (arp_lookup(next_hop, dst_mac) < 0) {
+    if (next_hop == 0xFFFFFFFF || dst_ip == 0xFFFFFFFF) {
+        /* Limited broadcast — use Ethernet broadcast MAC, no ARP needed */
+        dst_mac[0] = dst_mac[1] = dst_mac[2] = 0xFF;
+        dst_mac[3] = dst_mac[4] = dst_mac[5] = 0xFF;
+    } else if (arp_lookup(next_hop, dst_mac) < 0) {
         /* MAC unknown — send ARP request and drop this packet */
         arp_request(next_hop);
         return -1;
