@@ -119,13 +119,18 @@ Module registration order in `src/core/module_registry.c` must match this graph.
 ## Session End Protocol (EVERY session, automatically — never wait to be asked)
 
 1. Read ALL existing `prompts/PROMPT_*.md` for style reference
-2. Write `prompts/PROMPT_N.md` (N = highest + 1) matching the exact style
-3. Update **Current Status** in this file
-4. Update `docs/architecture.md` if new modules, layers, or rules were added
-5. Git commit — one commit per completed module:
+2. Write `prompts/PROMPT_N.md` (N = highest + 1) matching the exact style with nav links:
+   - Top and bottom bar: `[← N-1](PROMPT_N-1.md) | [index](README.md) | **N** | [N+1 →](PROMPT_N+1.md)`
+   - Update `prompts/README.md` table — add the new row, mark previous as done
+   - Update the previous prompt's `15 →` placeholder to a real link `[15 →](PROMPT_15.md)`
+3. Update **Current Status** in this file (`CLAUDE.md`)
+4. Update `README.md` — "What's built so far" table: mark completed modules as done, update in-progress row
+5. Update `docs/architecture.md` if new modules, layers, or rules were added
+6. Git commit — one commit per completed module:
    `feat(phaseN): module — one-line summary`
    **No Co-Authored-By trailers** — single author only
-6. Never batch unrelated modules into one commit
+7. `git push origin master` after every session
+8. Never batch unrelated modules into one commit
 
 ---
 
