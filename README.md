@@ -28,7 +28,8 @@ A monolithic x86_64 kernel written in C from scratch, vibecoded with Claude Code
 | 6 | ELF64 loader | done |
 | 6 | Userspace libc (crt0, malloc, printf, syscall wrappers) | done |
 | 6 | userspace init (PID 1) + shell (cd/ls/cat/exec) | done |
-| 7 | TCP/IP stack (e1000, ARP, IPv4, TCP) | pending |
+| 7 | e1000 NIC driver (PCI detect, DMA TX/RX rings) | done |
+| 7 | Ethernet, ARP, IPv4, ICMP, UDP, TCP | pending |
 | 8 | SMP, TTY, HTTP server | pending |
 
 ## Roadmap

@@ -1,4 +1,4 @@
-[← 19](PROMPT_19.md) | [index](README.md) | **20** | 21 →
+[← 19](PROMPT_19.md) | [index](README.md) | **20** | [21 →](PROMPT_21.md)
 
 ---
 
@@ -46,4 +46,4 @@ LD: ../../build/userspace/programs/shell
 
 ---
 
-[← 19](PROMPT_19.md) | [index](README.md) | **20** | 21 →
+[← 19](PROMPT_19.md) | [index](README.md) | **20** | [21 →](PROMPT_21.md)

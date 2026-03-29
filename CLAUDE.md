@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 6 Step 4 — `init` (PID 1, fork+execve+waitpid loop) + `shell` (readline, built-ins, exec); both ELFs link clean with `userspace.ld`
-- **Next task:** Phase 7 Step 1 — e1000 NIC driver (`src/net/e1000/`)
+- **Last completed:** Phase 7 Step 1 — `src/net/e1000/` (Intel 82540EM NIC driver, PCI detect, DMA TX/RX rings 32×2 KB, polled mode, MAC 52:54:00:12:34:56 from RAL/RAH)
+- **Next task:** Phase 7 Step 2 — `src/net/ethernet/` (frame parser/builder, ethertype dispatch)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
@@ -196,6 +196,14 @@ A module is only "complete" when ALL of these pass:
 - **Idle process (pid 0) `kstack = NULL`** — it uses the original boot stack; scheduler must never `kfree` it or touch `kstack`
 - **`process_set_current()` must be called before `context_switch()`** — not after; the new thread sees itself as current from its very first instruction
 - **`rsp = stack_top - 8` for new threads** — leaves an 8-byte slot at the top; `context_switch` jumps to `rip` directly (no `call`/`ret`), so a fresh thread starts with RSP already pointing below the sentinel zero
+
+### PMM / heap
+- **PMM must mark `0x100000 → __kernel_end_phys` used, not just `__kernel_start_phys`** — the `.boot` section (entry code + page tables) lives at physical 0x100000, below `__kernel_start`; if PMM omits it, the slab allocator eventually recycles those frames and `memset(slab, 0, 4096)` zeros the PML4, causing a triple fault; mark from the hard-coded physical base 0x100000
+
+### Net / e1000
+- **e1000 MMIO at `0xfeb80000` needs NO `vmm_map_page`** — that address falls in the boot 4th 1GB identity page (`pdpt_id[3]`, covers 0xC0000000–0xFFFFFFFF); calling `vmm_map_page` with a huge-page-covered VA tries to walk 4KB page tables through a 1GB PS entry and corrupts memory; just use the physical address as the VA directly
+- **QEMU e1000 EERD may not respond** — the 82540EM emulation doesn't always complete EEPROM reads; fall back to reading MAC from RAL0/RAH0, which QEMU populates at virtual NIC init time (typically `52:54:00:12:34:56`)
+- **Bus-master must be enabled before DMA** — set bit 2 of PCI Command register via `pci_write32(pci, 0x04, cmd | (1 << 2))` before programming RDBAL/TDBAL; without it the NIC cannot DMA and all TX descriptors stay busy
 
 ### Git / GitHub
 - **`filter-branch` requires a clean working tree** — always commit or stash before rewriting history
