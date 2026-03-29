@@ -35,6 +35,7 @@ links forward to the next.
 | [PROMPT_23](PROMPT_23.md) | ARP — request/reply, 16-entry table | Phase 7 | done |
 | [PROMPT_24](PROMPT_24.md) | IPv4 — header parser, checksum, routing, protocol dispatch | Phase 7 | done |
 | [PROMPT_25](PROMPT_25.md) | ICMP — echo request/reply (ping) | Phase 7 | done |
+| [PROMPT_26](PROMPT_26.md) | UDP — datagrams, port dispatch, checksum | Phase 7 | done |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 
