@@ -112,9 +112,10 @@ Module registration order in `src/core/module_registry.c` must match this graph.
 1. Read `CLAUDE.md` **Current Status** — know exactly where we left off
 2. Run `find src/ -name "*.h" | sort` — scan all public headers
 3. Read `src/core/module_registry.c` — verify module registration order
-4. Implement ONE complete module at a time
-5. After each module: show expected serial output, build and verify zero warnings
-6. NEVER break existing modules — state any refactors explicitly before making them
+4. If **Current Status** says "in progress" or "WIP" — read the partial files before touching anything
+5. Implement ONE complete module at a time
+6. After each module: `wsl make iso` → `wsl make run` → confirm serial output matches expected
+7. NEVER break existing modules — state any refactors explicitly before making them
 
 ## Session End Protocol (EVERY session, automatically — never wait to be asked)
 
@@ -131,6 +132,52 @@ Module registration order in `src/core/module_registry.c` must match this graph.
    **No Co-Authored-By trailers** — single author only
 7. `git push origin master` after every session
 8. Never batch unrelated modules into one commit
+
+---
+
+## Build & Verification
+
+A module is only "complete" when ALL of these pass:
+1. `wsl make iso` — zero warnings, zero errors
+2. `wsl make run` — QEMU boots, no triple fault, no hang
+3. Serial output contains the expected `[INFO] [module] ...` line
+4. No existing module's output disappeared or changed
+
+**When the build fails:**
+- Read the full error — never guess, never blindly change flags
+- Compiler errors: fix the source; never suppress with casts unless the cast is semantically correct
+- Linker errors: check `src/core/module_registry.c` includes and the new module's `extern` declarations
+- QEMU triple fault: attach GDB (`wsl make debug`), break at `_start`, step through init
+
+**WSL clock skew** (Windows only): if `make` says everything is up to date after a crash, run `touch src/**/*.c` or `wsl make clean && wsl make iso`
+
+---
+
+## Known Traps (learned the hard way)
+
+- **`-mno-sse -mno-sse2 -mno-avx` is mandatory** — GCC emits `movaps` for struct copies without it; causes #GP before SSE context is saved
+- **QEMU disk layout** — `-cdrom` ISO takes primary master (0x1F0); ATA disk goes on secondary (0x170) via `index=1`; always probe both channels
+- **ATAPI detection order** — send IDENTIFY first, *then* check mid/hi bytes (0x14/0xEB); at reset time mid/hi=0 for everything
+- **`kprintf` has no padding** — `%02x` silently prints wrong; use plain `%x`
+- **`poll_drq` must skip BSY** — check `if (s & BSY) continue` before testing DRQ or it times out immediately
+- **`context_switch` is one-way** — it returns into the *new* process's stack; the caller's locals after `context_switch()` execute in the old process when it's next scheduled
+- **Idle process (pid 0) kstack = NULL** — scheduler must never call `kfree` on it
+- **`filter-branch` / history rewrite** — requires clean working tree; always commit or stash first
+- **No `Co-Authored-By` in commits** — single author `MakingVibecodedProjects` only
+
+---
+
+## Files That Need Extra Care
+
+These files underpin everything — never modify without explicit discussion:
+
+| File | Why it's fragile |
+|------|-----------------|
+| `boot/entry.asm` | Sets up page tables, long mode, passes MB2 ptr — wrong change = no boot |
+| `kernel.ld` | Section order and alignment determine physical layout — wrong = page fault at boot |
+| `src/lib/types.h` | Every module depends on it — changing a typedef breaks everything |
+| `src/lib/module.h` | `kernel_module_t` layout must stay stable — all modules embed it |
+| `src/core/module_registry.c` | Init order is the dependency graph — wrong order = use-before-init crash |
 
 ---
 
