@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 7 Step 2 — `src/net/ethernet/` (frame parser/builder, `htons`/`ntohs` helpers, ethertype dispatch table, wired as e1000 RX callback)
-- **Next task:** Phase 7 Step 3 — `src/net/arp/` (ARP request/reply, ARP table)
+- **Last completed:** Phase 7 Step 3 — `src/net/arp/` (ARP request/reply, 16-entry table, learns sender on every receive, gated reply when `our_ip` set)
+- **Next task:** Phase 7 Step 4 — `src/net/ipv4/` (IPv4 header parser, routing table, IP assignment)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.
@@ -75,20 +75,20 @@ Module registration order in `src/core/module_registry.c` must match this graph.
 15. `src/tmpfs/` — in-memory FS for `/tmp`
 16. `src/devfs/` — `/dev/null` `/dev/zero` `/dev/tty` `/dev/sda`
 
-### Phase 5 — Process & Scheduling ← current
+### Phase 5 — Process & Scheduling ✓
 17. `src/process/` ✓ — TCB, kernel stacks, process table, pid allocator
 18. `src/scheduler/` — preemptive round-robin, `context_switch` asm, `kthread_create`/exit
 19. `src/syscall/` — SYSCALL/SYSRET dispatch table
     Syscalls: read write open close exit getpid fork execve waitpid mmap munmap brk
 
-### Phase 6 — Userspace
+### Phase 6 — Userspace ✓
 20. `src/vmm/` addition — per-process page tables, COW fork
 21. `src/elf/` — ELF64 loader
 22. `userspace/libc/` — crt0, syscall wrappers, malloc, printf, string.h
 23. `userspace/programs/init` — PID 1
 24. `userspace/programs/shell` — cd ls cat exec
 
-### Phase 7 — Networking
+### Phase 7 — Networking ← current
 25. `src/net/e1000/` — Intel e1000, PCI detect, DMA TX/RX rings
 26. `src/net/ethernet/` — frame parse/build, ethertype dispatch
 27. `src/net/arp/` — request/reply, ARP table
