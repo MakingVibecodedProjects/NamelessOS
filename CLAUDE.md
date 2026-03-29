@@ -124,6 +124,7 @@ Module registration order in `src/core/module_registry.c` must match this graph.
 4. Update `docs/architecture.md` if new modules, layers, or rules were added
 5. Git commit — one commit per completed module:
    `feat(phaseN): module — one-line summary`
+   **No Co-Authored-By trailers** — single author only
 6. Never batch unrelated modules into one commit
 
 ---
