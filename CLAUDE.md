@@ -210,12 +210,12 @@ These files underpin everything — never modify without explicit discussion:
 - Force push only after history rewrites: `git push --force origin master`
 
 ### Identity
-Use your own GitHub identity — do not hardcode the repo owner's name or email:
+Use your own GitHub identity:
 ```bash
 git config user.name "YourGitHubUsername"
 git config user.email "your@email.com"
 ```
-> To avoid GitHub showing "authored and committed" as two separate entries, use the email that is verified on your GitHub account (or your GitHub noreply: `<ID>+<username>@users.noreply.github.com`, found at github.com/settings/emails).
+> Use the email verified on your GitHub account, or your noreply address (`<ID>+<username>@users.noreply.github.com`) from github.com/settings/emails.
 
 ---
 
