@@ -123,7 +123,10 @@ Module registration order in `src/core/module_registry.c` must match this graph.
 2. Write `prompts/PROMPT_N.md` (N = highest + 1) matching the exact style with nav links:
    - Top and bottom bar: `[← N-1](PROMPT_N-1.md) | [index](README.md) | **N** | [N+1 →](PROMPT_N+1.md)`
    - Update `prompts/README.md` table — add the new row, mark previous as done
-   - Update the previous prompt's `15 →` placeholder to a real link `[15 →](PROMPT_15.md)`
+   - Update the previous prompt's nav placeholder AND its `## Next session` body line to real links
+     - Nav bar: `N →` → `[N →](PROMPT_N.md)` (both top and bottom)
+     - Body: `PROMPT_N — ...` → `[PROMPT_N →](PROMPT_N.md) — ...`
+   - **PROMPT_N is a completion log, not a start prompt** — write it AFTER the module is built and verified, never before
 3. Update **Current Status** in this file (`CLAUDE.md`)
 4. Update `README.md` — "What's built so far" table: mark completed modules as done, update in-progress row
 5. Update `docs/architecture.md` if new modules, layers, or rules were added

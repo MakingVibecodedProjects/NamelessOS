@@ -29,7 +29,7 @@
 
 ## Next session
 
-PROMPT_15 — Scheduler: preemptive round-robin, context_switch asm, timer-driven tick.
+[PROMPT_15 →](PROMPT_15.md) — Scheduler: preemptive round-robin, context_switch asm, timer-driven tick.
 
 ---
 
