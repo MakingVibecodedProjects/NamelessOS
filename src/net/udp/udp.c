@@ -17,26 +17,37 @@ typedef struct {
 static udp_entry_t handlers[UDP_MAX_HANDLERS];
 static int         handler_count = 0;
 
-/* ── csum_add — add a byte buffer to a running checksum accumulator ─── */
-static u32 csum_add(u32 sum, const u8 *buf, u16 len) {
-    while (len > 1) {
-        sum += (u32)((u16)buf[0] << 8 | (u16)buf[1]);
+/* ── csum_native — add a byte buffer (native u16 reads) to a checksum ── */
+/* Uses native (host) byte order reads, matching how receivers verify.    */
+static u32 csum_native(u32 sum, const u8 *buf, u16 len) {
+    /* Sum aligned 16-bit words in native byte order */
+    while (len >= 2) {
+        u16 w;
+        __builtin_memcpy(&w, buf, 2);
+        sum += w;
         buf += 2;
         len  = (u16)(len - 2);
     }
+    /* Odd trailing byte: pad with zero on the right in network order.
+       On little-endian: place the byte in the LOW position so that
+       in network (big-endian) terms it occupies the HIGH byte.         */
     if (len)
-        sum += (u32)((u16)buf[0] << 8);
+        sum += (u32)buf[0];
     return sum;
 }
 
 /* ── udp_checksum ────────────────────────────────────────────────────── */
 /* Compute UDP checksum over pseudo-header + UDP header + data.
+   Uses native u16 reads (same as ip_checksum), so the result is
+   compatible with any receiver that uses native byte-order verification.
    Returns 0xFFFF if the one's-complement result is 0. */
 static u16 udp_checksum(u32 src_ip, u32 dst_ip,
                         const udp_hdr_t *hdr, const u8 *data, u16 data_len) {
     u16 udp_len = (u16)(UDP_HDR_LEN + data_len);
 
-    /* Build pseudo-header as a plain byte array to avoid packed-pointer cast */
+    /* Build pseudo-header as a plain byte array to avoid packed-pointer cast.
+       Fields are in network byte order (big-endian) as they appear on wire.
+       Native u16 reads of these bytes produce the correct host-order values. */
     u8 ph[12];
     ph[0]  = (u8)(src_ip >> 24); ph[1]  = (u8)(src_ip >> 16);
     ph[2]  = (u8)(src_ip >>  8); ph[3]  = (u8)(src_ip);
@@ -47,10 +58,10 @@ static u16 udp_checksum(u32 src_ip, u32 dst_ip,
     ph[10] = (u8)(udp_len >> 8); ph[11] = (u8)(udp_len);
 
     u32 sum = 0;
-    sum = csum_add(sum, ph, 12);
-    sum = csum_add(sum, (const u8 *)hdr, UDP_HDR_LEN);
+    sum = csum_native(sum, ph, 12);
+    sum = csum_native(sum, (const u8 *)hdr, UDP_HDR_LEN);
     if (data && data_len)
-        sum = csum_add(sum, data, data_len);
+        sum = csum_native(sum, data, data_len);
 
     while (sum >> 16)
         sum = (sum & 0xFFFF) + (sum >> 16);

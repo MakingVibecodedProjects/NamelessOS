@@ -205,9 +205,10 @@ static int e1000_init_impl(void) {
 
     e1000_ready = true;
     klog(LOG_INFO,
-         "[e1000] ready — MAC %x:%x:%x:%x:%x:%x\n",
+         "[e1000] ready — MAC %x:%x:%x:%x:%x:%x status=0x%x\n",
          dev.mac[0], dev.mac[1], dev.mac[2],
-         dev.mac[3], dev.mac[4], dev.mac[5]);
+         dev.mac[3], dev.mac[4], dev.mac[5],
+         (unsigned)e1000_read(E1000_REG_STATUS));
     return 0;
 }
 
