@@ -24,6 +24,7 @@
 #include "../net/ipv4/ipv4.h"
 #include "../net/icmp/icmp.h"
 #include "../net/udp/udp.h"
+#include "../net/tcp/tcp.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
@@ -52,6 +53,7 @@ static kernel_module_t *modules[] = {
     &mod_ipv4,
     &mod_icmp,
     &mod_udp,
+    &mod_tcp,
 };
 
 #define MODULE_COUNT ((int)(sizeof(modules) / sizeof(modules[0])))
