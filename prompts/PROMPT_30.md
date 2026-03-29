@@ -1,4 +1,4 @@
-[← 29](PROMPT_29.md) | [index](README.md) | **30** | 31 →
+[← 29](PROMPT_29.md) | [index](README.md) | **30** | [31 →](PROMPT_31.md)
 
 ---
 
@@ -58,8 +58,8 @@ AP boot with `-smp 2` caused the kernel to reboot in a loop:
 
 ## Next session
 
-31 → — Phase 8 Step 2: `src/tty/` — line discipline, `/dev/tty0`
+[PROMPT_31 →](PROMPT_31.md) — Phase 8 Step 2: `src/tty/` — line discipline, `/dev/tty0`
 
 ---
 
-[← 29](PROMPT_29.md) | [index](README.md) | **30** | 31 →
+[← 29](PROMPT_29.md) | [index](README.md) | **30** | [31 →](PROMPT_31.md)

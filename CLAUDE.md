@@ -13,8 +13,8 @@ Higher half kernel at `0xFFFFFFFF80000000`. No hosted libc anywhere in `src/`.
 ## Current Status
 
 - **Last session:** 2026-03-29
-- **Last completed:** Phase 8 Step 1 — `src/smp/` (LAPIC enable, per-CPU gs-based data, spinlocks, AP trampoline; AP boot gated on ACPI MADT)
-- **Next task:** Phase 8 Step 2 — `src/tty/` (line discipline, /dev/tty0)
+- **Last completed:** Phase 8 Step 2 — `src/tty/` (cooked mode line discipline, `/dev/tty0`, timer-polled keyboard, VGA echo)
+- **Next task:** Phase 8 Step 3 — launch init (embed init ELF as C byte array, `elf_load` into new PML4, `iretq` to userspace PID 1)
 - **Known issues:** none
 - **Build note:** Always `make iso` then `make run`. Direct `-kernel` QEMU flag does not work with Multiboot2.
 - **Platform:** build tools run under WSL2 on Windows. Use `wsl make iso && wsl make run` from PowerShell, or open a WSL terminal.

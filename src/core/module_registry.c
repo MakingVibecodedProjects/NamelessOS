@@ -28,6 +28,7 @@
 #include "../net/socket/socket.h"
 #include "../net/dhcp/dhcp.h"
 #include "../smp/smp.h"
+#include "../tty/tty.h"
 
 /* ── Module table — init order matters ──────────────────────────── */
 static kernel_module_t *modules[] = {
@@ -46,6 +47,7 @@ static kernel_module_t *modules[] = {
     &mod_vfs,
     &mod_tmpfs,
     &mod_devfs,
+    &mod_tty,
     &mod_process,
     &mod_scheduler,
     &mod_syscall,
