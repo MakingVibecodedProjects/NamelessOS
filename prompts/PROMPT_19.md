@@ -1,4 +1,4 @@
-[← 18](PROMPT_18.md) | [index](README.md) | **19** | 20 →
+[← 18](PROMPT_18.md) | [index](README.md) | **19** | [20 →](PROMPT_20.md)
 
 ---
 
@@ -43,8 +43,8 @@ AS: ../../build/userspace/libc/crt0.o
 
 ## Next session
 
-[PROMPT_20 →](PROMPT_20.md) — Phase 6 Step 4: `userspace/programs/init` — PID 1, and `userspace/programs/shell` — cd/ls/cat/exec.
+[PROMPT_20 →](PROMPT_20.md) — Phase 6 Step 4: `userspace/programs/init` (PID 1) + `userspace/programs/shell` (cd/ls/cat/exec).
 
 ---
 
-[← 18](PROMPT_18.md) | [index](README.md) | **19** | 20 →
+[← 18](PROMPT_18.md) | [index](README.md) | **19** | [20 →](PROMPT_20.md)

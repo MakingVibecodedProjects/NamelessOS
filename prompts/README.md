@@ -29,6 +29,7 @@ links forward to the next.
 | [PROMPT_17](PROMPT_17.md) | Per-process page tables, COW fork, CR3 switch | Phase 6 | done |
 | [PROMPT_18](PROMPT_18.md) | ELF64 loader — PT_LOAD mapper, entry point | Phase 6 | done |
 | [PROMPT_19](PROMPT_19.md) | Userspace libc — crt0, syscall wrappers, malloc, printf | Phase 6 | done |
+| [PROMPT_20](PROMPT_20.md) | init (PID 1) + shell (cd/ls/cat/exec) | Phase 6 | done |
 
 > Files are written automatically by Claude Code. Do not edit manually.
 

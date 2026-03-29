@@ -93,11 +93,13 @@ debug: $(ISO)
 		-boot d \
 		-s -S
 
-# ── Userspace (libc.a + crt0.o) ────────────────────────────────────
+# ── Userspace (libc.a + crt0.o + programs) ─────────────────────────
 userspace:
 	$(MAKE) -C userspace/libc
+	$(MAKE) -C userspace/programs
 
 # ── Clean ───────────────────────────────────────────────────────────
 clean:
 	rm -rf $(BUILD)
 	$(MAKE) -C userspace/libc clean 2>/dev/null || true
+	$(MAKE) -C userspace/programs clean 2>/dev/null || true
