@@ -1,3 +1,7 @@
+[← 6](PROMPT_6.md) | [index](README.md) | **7** | [8 →](PROMPT_8.md)
+
+---
+
 # PROMPT_7 — Phase 3 Step 1: Timer
 
 **Session date:** 2026-03-29
@@ -19,30 +23,13 @@
 ## Verified serial output
 
 ```
-[INFO] [serial] COM1 initialized at 115200 baud
-[INFO] [vga] 80x25 text mode ready
-[INFO] [gdt] GDT loaded (5 entries)
-[INFO] [idt] IDT loaded (256 entries)
-[INFO] [pic] PIC remapped, IRQs 0-15 -> vectors 32-47
-[INFO] [pmm] 510 MB free across 1 usable region(s)
-[INFO] [vmm] VMM ready, CR3=0x101000
-[INFO] [heap] slab allocator ready (10 caches, 8..4096 B)
 [INFO] [timer] PIT channel 0 at 1000 Hz
-[INFO] [kernel] NamelessOS v0.1 booting...
-[INFO] [kernel] All modules initialized.
-[INFO] [kernel] Interrupts enabled.
 ```
 
-## Next session prompt
+## Next session
 
-Implement **Phase 3 Step 2**: `src/keyboard/` — PS/2 keyboard driver.
+[PROMPT_8 →](PROMPT_8.md) — Keyboard: PS/2 IRQ1, scancode→ASCII, 256-byte ring buffer.
 
-- `src/keyboard/keyboard_internal.h` — PS/2 port constants (data=0x60, status=0x64), scancode set 1 table (128 entries → ASCII), `KB_BUF_SIZE=256`
-- `src/keyboard/keyboard.h` — `keyboard_init()`, `keyboard_getc()` → i32 (-1 if empty), `mod_keyboard`
-- `src/keyboard/keyboard.c`:
-  - IRQ1 handler: read scancode from 0x60, ignore key-release (bit 7 set), translate make-code via table, push ASCII into 256-byte power-of-two circular buffer
-  - `keyboard_getc()`: pop one byte from buffer, return -1 if empty
-  - Register IRQ1 via `irq_register(1, ...)` + `irq_enable(1)`
-  - Log `[keyboard] PS/2 keyboard ready`
-- Register `mod_keyboard` in module_registry after `mod_timer`
-- Zero warnings policy applies
+---
+
+[← 6](PROMPT_6.md) | [index](README.md) | **7** | [8 →](PROMPT_8.md)

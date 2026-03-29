@@ -1,3 +1,7 @@
+← [index](README.md) | **1** | [2 →](PROMPT_2.md)
+
+---
+
 # PROMPT_1 — Phase 1 Step 1: Full Kernel Scaffold
 
 **Session date:** 2026-03-29
@@ -38,9 +42,10 @@
 [INFO] [kernel] All modules initialized.
 ```
 
-## Next session prompt
+## Next session
 
-Implement **Phase 1 Step 2**: `src/gdt/` — flat 64-bit GDT with null/code/data/TSS descriptors,
-`gdt_init()`, `gdt_load()` (lgdt + reload segments), TSS stub (base/limit only, no stack yet),
-register `mod_gdt` in module_registry, log `[gdt] GDT loaded (5 entries)` on init.
-Zero warnings policy applies.
+[PROMPT_2 →](PROMPT_2.md) — GDT: flat 64-bit descriptors, TSS stub, segment reload.
+
+---
+
+← [index](README.md) | **1** | [2 →](PROMPT_2.md)

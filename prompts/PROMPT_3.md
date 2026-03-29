@@ -1,3 +1,7 @@
+[← 2](PROMPT_2.md) | [index](README.md) | **3** | [4 →](PROMPT_4.md)
+
+---
+
 # PROMPT_3 — Phase 1 Step 3: IDT
 
 **Session date:** 2026-03-29
@@ -11,12 +15,12 @@
 - `src/idt/idt.c` — fills 256-entry IDT, loads with `lidt`, `mod_idt`
 - `src/idt/exceptions.asm` — NASM stubs for vectors 0–31 (ISR_NOERR/ISR_ERR macros), `isr_table` in `.rodata`, common `exception_common` trampoline
 - `src/idt/exceptions.c` — `exception_dispatch()`: prints vec/name/error/RIP/CS/RFLAGS/RSP to serial then VGA, halts
-- Updated `Makefile` to also assemble `src/**/*.asm` → `build/asm/**/*.o` (separate dir to avoid `.c`/`.asm` name collision)
+- Updated `Makefile` to assemble `src/**/*.asm` → `build/asm/**/*.o` (separate dir to avoid `.c`/`.asm` name collision)
 
-## Key decisions / bugs fixed
+## Key decisions
 
-- **`build/asm/` prefix for src ASM objects** — `src/idt/exceptions.asm` would produce `build/idt/exceptions.o`, colliding with `src/idt/exceptions.c` → `build/idt/exceptions.o`. Fixed by outputting ASM to `build/asm/idt/exceptions.o`.
-- Exception trampoline pops `vector` and `error_code` into `rdi`/`rsi`, then reads the CPU-pushed frame directly from RSP to fill `rdx`/`rcx`/`r8`/`r9`, then `sub rsp, 8` for 16-byte alignment before `call exception_dispatch`.
+- **`build/asm/` prefix for src ASM objects** — `src/idt/exceptions.asm` would collide with `src/idt/exceptions.c` at `build/idt/exceptions.o`. Fixed by routing ASM output to `build/asm/idt/exceptions.o`.
+- Exception trampoline pops `vector` and `error_code` into `rdi`/`rsi`, reads the CPU-pushed frame from RSP, then `sub rsp, 8` for 16-byte alignment before `call exception_dispatch`.
 
 ## Verified serial output (normal boot)
 
@@ -43,15 +47,10 @@
   RSP    : 0x8010cff0
 ```
 
-## Next session prompt
+## Next session
 
-Implement **Phase 1 Step 4**: `src/pic/` — 8259A PIC remapping and IRQ management.
+[PROMPT_4 →](PROMPT_4.md) — PIC: 8259A remap, IRQ stubs 0–15, irq_register/enable/disable, STI.
 
-- `src/pic/pic_internal.h` — PIC1/PIC2 port constants, ICW1–4 values, EOI command
-- `src/pic/pic.h` — `pic_init()`, `irq_register(u8 irq, void (*handler)(void))`, `irq_enable(u8)`, `irq_disable(u8)`, `pic_eoi(u8)`, `extern mod_pic`
-- `src/pic/pic.c` — remap IRQ 0–7 to vectors 32–39, IRQ 8–15 to 40–47; mask all IRQs after init; handler table; `irq_dispatch()` called from IRQ stubs
-- `src/pic/irq_stubs.asm` — stubs for vectors 32–47 (no error code, push IRQ number, call `irq_dispatch`), save/restore all registers
-- Register `mod_pic` in module_registry after `mod_idt`
-- After `pic_init()`, enable `STI` in `kernel_main` and log `[kernel] Interrupts enabled`
-- Log `[pic] PIC remapped, IRQs 0-15 → vectors 32-47` on init
-- Zero warnings policy applies
+---
+
+[← 2](PROMPT_2.md) | [index](README.md) | **3** | [4 →](PROMPT_4.md)

@@ -1,3 +1,7 @@
+[← 10](PROMPT_10.md) | [index](README.md) | **11** | [12 →](PROMPT_12.md)
+
+---
+
 # PROMPT_11 — Phase 4 Step 2: VFS
 
 **Session date:** 2026-03-29
@@ -12,9 +16,9 @@
 
 ## Key decisions
 
-- **Mountpoint indirection via `ptr`** — when a node has `VFS_MOUNTPOINT` flag, all vtable calls are forwarded to `node->ptr` (the mounted root); this keeps path traversal simple
-- **fd table owns offset** — sequential reads advance `fd_table[fd].offset` automatically so callers don't need to track position
-- **Simple single-level mount path** — `vfs_mount` only supports "/" and "/name" paths; full path resolution comes with process/syscall layer
+- **Mountpoint indirection via `ptr`** — when a node has `VFS_MOUNTPOINT` flag, all vtable calls forward to `node->ptr` (the mounted root); keeps path traversal simple
+- **fd table owns offset** — sequential reads advance `fd_table[fd].offset` automatically; callers don't track position
+- **Single-level mount** — `vfs_mount` only supports "/" and "/name" paths; full path resolution comes with the syscall layer
 
 ## Verified serial output
 
@@ -22,17 +26,10 @@
 [INFO] [vfs] VFS ready (max 8 fs, 64 fds)
 ```
 
-## Next session prompt
+## Next session
 
-Implement **Phase 4 Step 3**: `src/tmpfs/` — in-memory filesystem.
+[PROMPT_12 →](PROMPT_12.md) — tmpfs: in-memory filesystem, 64 inodes, mounted on /.
 
-- `src/tmpfs/tmpfs_internal.h` — `TMPFS_MAX_NODES=64`, `TMPFS_MAX_FILE_SIZE=65536` (64 KB), `tmpfs_inode_t` struct (name, flags, data ptr, size, children array for dirs)
-- `src/tmpfs/tmpfs.h` — `tmpfs_init()`, `filesystem_t tmpfs_fs` (exported for `vfs_register_fs`), `mod_tmpfs`
-- `src/tmpfs/tmpfs.c`:
-  - Static inode pool (64 nodes), `kmalloc`/`kfree` for file data
-  - `fs_ops_t` implementation: read, write (resize with krealloc), open/close (no-op), readdir (iterate children), finddir (linear scan by name)
-  - `tmpfs_mount(NULL)` allocates root dir node, returns it
-  - On init: call `vfs_register_fs(&tmpfs_fs)` then `vfs_mount("tmpfs", "/", NULL)`
-  - Log `[tmpfs] mounted on /`
-- Register `mod_tmpfs` after `mod_vfs` in module_registry
-- Zero warnings policy applies
+---
+
+[← 10](PROMPT_10.md) | [index](README.md) | **11** | [12 →](PROMPT_12.md)
